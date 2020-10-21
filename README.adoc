@@ -1,0 +1,55 @@
+== Emoba Assignment 1 - FreezerApp
+
+=== Bearbeitet von
+
+* Vorname Nachname
+
+=== Abgabe
+
+* Klasse 5iCa: Montag, 2.11..2020, 8:00 Uhr
+* Klasse 5iCb: Mittwoch, 4.11.2020, 12:00 Uhr
+
+Die Abgabe erfolgt durch ein "Push" auf den Master-Branch Ihres GitHub-Repositories.
+
+=== Initiale Schritte
+
+* Tragen Sie ihren Namen unter "Bearbeitet von" ein. Manche GitHub-Account-Namen können nicht eindeutig einer Person zugeordnet werden.
+* Pushen Sie diese Änderung am besten sofort ins Git-Repository (z.B. via "VCS -> Commit… -> Commit&Push")
+
+=== Die Aufgabe: MusicPlayer für Deezer
+
+Entwerfen und implementieren Sie einen MusicPlayer für Deezer als native Android App.
+
+Die im Unterricht gezeigte App ist nur eine mögliche Umsetzung des gewünschten Funktionsumfangs. Sie können dieses UI übernehmen oder aber einen eigenen Entwurf, beispielsweise wie im Modul uidC erarbeitet, umsetzen.
+
+Anforderungen:
+
+* Gewünschte Funktionalität
+** Suche nach Interpret, nach Song, Anzeige der Radio-Stations und speichern von Lieblings-Songs.
+** Abspielen, Pausieren von Songs. Nochmaliges Spielen eines Songs von Beginn an. Sprung zum nächsten Song.
+* Verwendung des Deezer-API
+** https://developers.deezer.com/api
+* Das UI ist komplett mit Jetpack Compose zu implementieren.
+** https://developer.android.com/jetpack/compose
+* Implementierungssprache für die gesamte Applikation ist Kotlin.
+* Die im Unterricht erarbeitete Grundstruktur einer Android-App ist anzuwenden.
+* Das Deezer-Logo muss an prominenter Stelle sichtbar sein (Vorgabe aus den Lizenzbedingungen)
+* Weitere Libraries als im Unterricht verwendet sind nicht erlaubt
+
+
+=== Bewertung
+
+Es können in diesem Assignment maximal 4 Punkte erreicht werden. Der Fokus liegt dabei, neben Umsetzung der gewünschten Funktionalität, auf der Code-Qualität. Der Coolness-Faktor des UI wird über den Coolest App Award berücksichtigt.
+
+* 4 Punkte
+** Umsetzung der gesamten gewünschten Funktionalität und der oben genannten Grundanforderungen
+** Strukturierung der App in 3 Layer
+** UI Code ist klar strukturiert in unabhängige Screens und via Composable Functions.
+** TestCases für ViewModels, Data Klassen und Services
+* 1 Punkt
+** Ein Song wird von Deezer bezogen, der Titel des Songs und des Interpreten werden angezeigt und kann abgespielt und pausiert werden.
+* 0 Punkte
+** falls die Kriterien für einen Punkt nicht erfüllt sind ;-)
+** falls das Deezer-API nicht verwendet wird
+** falls das Projekt nicht kompilierfähig ist
+** für Plagiate
