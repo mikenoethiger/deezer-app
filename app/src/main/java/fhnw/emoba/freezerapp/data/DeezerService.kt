@@ -1,5 +1,7 @@
 package fhnw.emoba.freezerapp.data
 
+import androidx.compose.ui.graphics.ImageAsset
+
 interface DeezerService {
 
     /**
@@ -24,4 +26,6 @@ interface DeezerService {
      * Get unique artists from a search result
      */
     fun uniqueArtists(searchResults: List<SearchResult>): Set<SearchResult.Artist>
+
+    fun getAlbumCover(albumId: Int, size: ImageSize = ImageSize.x400): ImageAsset
 }

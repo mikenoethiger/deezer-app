@@ -11,6 +11,8 @@ import javax.net.ssl.HttpsURLConnection
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import androidx.compose.ui.graphics.ImageAsset
+import androidx.compose.ui.graphics.asImageAsset
 import java.net.URLEncoder
 
 fun content(url: String) : String = content(streamFrom(url))
@@ -54,3 +56,19 @@ fun streamFrom(url: String): InputStream {
 }
 
 fun URLEncode(q: String) = URLEncoder.encode(q, StandardCharsets.UTF_8.toString())
+
+fun defaultImage(size: Int): ImageAsset {
+    val bitmap = Bitmap.createBitmap(
+        size,
+        size,
+        Bitmap.Config.ALPHA_8
+    )
+    return bitmap.asImageAsset()
+}
+
+enum class ImageSize(val size: Int, val identifier: String, val defaultImage: ImageAsset = defaultImage(size)) {
+    x50(50, "small"),
+    x120(120, "medium"),
+    x400(400, "big"),
+    x1000(1000, "xl")
+}

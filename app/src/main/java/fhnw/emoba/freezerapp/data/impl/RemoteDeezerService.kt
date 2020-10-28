@@ -1,11 +1,14 @@
 package fhnw.emoba.freezerapp.data.impl
 
+import androidx.compose.ui.graphics.ImageAsset
+import androidx.compose.ui.graphics.asImageAsset
 import fhnw.emoba.freezerapp.data.*
 import org.json.JSONObject
 import java.lang.StringBuilder
 
 object RemoteDeezerService : DeezerService {
     private const val baseURL = "https://api.deezer.com"
+    private const val baseURLAlbum = "$baseURL/album"
 
     override fun search(query: String, fuzzyMode: Boolean): List<SearchResult> {
         // early return
@@ -46,5 +49,11 @@ object RemoteDeezerService : DeezerService {
         val url = "$baseURL/search?q=$q&strict=$strict"
         // make API request and map result to SearchResults
         return JSONObject(content(url)).getJSONArray("data").map { SearchResult(it) }
+    }
+
+    override fun getAlbumCover(albumId: Int, size: ImageSize): ImageAsset {
+        // TODO improve by caching covers locally
+        val url = "$baseURLAlbum/$albumId/image?size=${size.identifier}"
+        return bitmap(url).asImageAsset()
     }
 }
