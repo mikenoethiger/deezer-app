@@ -9,6 +9,12 @@ class SearchResult(searchJSONObject: JSONObject) {
         val title = albumObject.getString("title")
         val cover = albumObject.getString("cover")
         val tracklist = albumObject.getString("tracklist")
+
+        override fun equals(other: Any?): Boolean {
+            if (other == null || other !is Album) return false
+            return other.id == id
+        }
+        override fun hashCode(): Int  = id
     }
     class Artist(albumObject: JSONObject) {
         val id = albumObject.getInt("id")
@@ -16,12 +22,17 @@ class SearchResult(searchJSONObject: JSONObject) {
         val link = albumObject.getString("link")
         val picture = albumObject.getString("picture")
         val tracklist = albumObject.getString("tracklist")
+
+        override fun equals(other: Any?): Boolean {
+            if (other == null || other !is Artist) return false
+            return other.id == id
+        }
+        override fun hashCode(): Int  = id
     }
     val id             = searchJSONObject.getInt("id") // The track's Deezer id
     val readable       = searchJSONObject.getBoolean("readable") // true if the track is readable in the player for the current user
     val title          = searchJSONObject.getString("title") // The track's fulltitle
     val titleShort     = searchJSONObject.getString("title_short") // The track's short title
-    val titleVersion   = searchJSONObject.getString("title_version") // The track version
     val link           = searchJSONObject.getString("link") // The url of the track on Deezer
     val duration       = searchJSONObject.getInt("duration") // The track's duration in seconds
     val rank           = searchJSONObject.getLong("rank") // The track's Deezer rank

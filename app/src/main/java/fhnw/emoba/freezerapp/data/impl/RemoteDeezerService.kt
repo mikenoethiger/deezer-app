@@ -3,26 +3,47 @@ package fhnw.emoba.freezerapp.data.impl
 import fhnw.emoba.freezerapp.data.*
 import org.json.JSONObject
 import java.lang.StringBuilder
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 
 object RemoteDeezerService : DeezerService {
     private const val baseURL = "https://api.deezer.com"
 
-    override fun search(searchParameters: Map<String, String>): List<SearchResult> {
-        // API search docs: https://developers.deezer.com/api/search
-        // Using advanced search here, example:
-        // https://api.deezer.com/search?q=artist:%22eminem%22%20track:%22lose%20yourself%22
-
+    override fun search(query: String, fuzzyMode: Boolean): List<SearchResult> {
         // early return
-        if (searchParameters.isEmpty()) return emptyList()
+        if (query.isBlank()) return emptyList()
+        val q = URLEncode("\"$query\"")
+        return apiSearch(q, fuzzyMode)
+    }
+
+    override fun extendedSearch(queryParameters: Map<String, String>, fuzzyMode: Boolean): List<SearchResult> {
+        // early return
+        if (queryParameters.isEmpty()) return emptyList()
         // validation
         val validParams = arrayOf("artist", "album", "track", "label", "dur_min", "dur_max", "bpm_min", "bpm_max")
-        searchParameters.keys.forEach { if (it !in validParams) error("Invalid parameter '$it'. Use any of: $validParams") }
+        queryParameters.keys.forEach { if (it !in validParams) error("Invalid parameter '$it'. Use any of: $validParams") }
         // build url
         val q = StringBuilder()
-        searchParameters.forEach{ q.append("${it.key}:\"${it.value}\" ")}
-        val url = "$baseURL/search?q=" + URLEncoder.encode(q.toString(), StandardCharsets.UTF_8.toString())
+        queryParameters.forEach{ q.append("${it.key}:\"${it.value}\" ")}
+        return apiSearch(URLEncode(q.toString()), fuzzyMode)
+    }
+
+    override fun uniqueAlbums(searchResults: List<SearchResult>): Set<SearchResult.Album> {
+        val albums = mutableSetOf<SearchResult.Album>()
+        searchResults.forEach{albums.add(it.album)}
+        return albums
+    }
+
+    override fun uniqueArtists(searchResults: List<SearchResult>): Set<SearchResult.Artist> {
+        val artists = mutableSetOf<SearchResult.Artist>()
+        searchResults.forEach{artists.add(it.artist)}
+        return artists
+    }
+
+    /**
+     * @param q url encoded query string
+     */
+    private fun apiSearch(q: String, fuzzyMode: Boolean): List<SearchResult> {
+        val strict = if (fuzzyMode) "off" else "on"
+        val url = "$baseURL/search?q=$q&strict=$strict"
         // make API request and map result to SearchResults
         return JSONObject(content(url)).getJSONArray("data").map { SearchResult(it) }
     }
