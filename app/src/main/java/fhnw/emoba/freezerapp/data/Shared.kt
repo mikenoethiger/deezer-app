@@ -72,3 +72,11 @@ enum class ImageSize(val size: Int, val identifier: String, val defaultImage: Im
     x400(400, "big"),
     x1000(1000, "xl")
 }
+
+fun formatDuration(seconds: Int): String {
+    val hours = seconds/60/60
+    val mins = (seconds - hours*60*60)/60
+    val secs = (seconds - hours*60*60 - mins*60)
+    if (hours != 0) return hours.toString() + ":" + String.format("%02d", mins) + ":" + String.format("%02d", secs)
+    return mins.toString() + ":" + String.format("%02d", secs)
+}
