@@ -38,8 +38,10 @@ object PlayerModel {
         currentTrack = track
     }
     fun play() {
-        player.start()
         currentlyPlaying = true
+        // player might not be ready when the track didn't finish loading
+        // in that case the setOnPreparedListener() listener will start the player because we set currentlyPlaying = true
+        if (isReady) player.start()
         startTimeSliderJob()
     }
     fun pause() {

@@ -9,6 +9,7 @@ import java.lang.StringBuilder
 object RemoteDeezerService : DeezerService {
     private const val baseURL = "https://api.deezer.com"
     private const val baseURLAlbum = "$baseURL/album"
+    private const val baseURLArtist = "$baseURL/artist"
 
     override fun search(query: String, fuzzyMode: Boolean): List<Track> {
         // early return
@@ -54,6 +55,16 @@ object RemoteDeezerService : DeezerService {
     override fun getAlbumCover(albumId: Int, size: ImageSize): ImageAsset {
         // TODO improve by caching covers locally
         val url = "$baseURLAlbum/$albumId/image?size=${size.identifier}"
+        return bitmap(url).asImageAsset()
+    }
+
+    override fun getArtistCover(artistId: Int, size: ImageSize): ImageAsset {
+        val url = "$baseURLArtist/$artistId/image?size=${size.identifier}"
+        return getImage(url)
+    }
+
+    private fun getImage(url: String): ImageAsset {
+        // TODO improve by caching covers locally
         return bitmap(url).asImageAsset()
     }
 }

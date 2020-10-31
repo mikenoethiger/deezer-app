@@ -15,7 +15,6 @@ class Track(searchJSONObject: JSONObject) {
         val coverLink = albumObject.getString("cover")
         val tracklist = albumObject.getString("tracklist")
         // view model will trigger cover image loading
-        var coversLoaded by mutableStateOf(false)
         var coverX120: ImageAsset by mutableStateOf(ImageSize.x120.defaultImage)
         var coverX400: ImageAsset by mutableStateOf(ImageSize.x400.defaultImage)
         var coverX1000: ImageAsset by mutableStateOf(ImageSize.x1000.defaultImage)
@@ -32,7 +31,8 @@ class Track(searchJSONObject: JSONObject) {
         val link = albumObject.getString("link")
         val pictureLink = albumObject.getString("picture")
         // view model will trigger the pricture loading
-        var picture: ImageAsset by mutableStateOf(ImageSize.x400.defaultImage)
+        var pictureX120: ImageAsset by mutableStateOf(ImageSize.x120.defaultImage)
+        var pictureX400: ImageAsset by mutableStateOf(ImageSize.x400.defaultImage)
         val tracklist = albumObject.getString("tracklist")
 
         override fun equals(other: Any?): Boolean {

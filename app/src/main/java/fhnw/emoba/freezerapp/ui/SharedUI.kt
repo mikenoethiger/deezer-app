@@ -5,34 +5,77 @@ import androidx.compose.animation.*
 import androidx.compose.foundation.Icon
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.Text
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.preferredHeight
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageAsset
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.FailedResource
 import androidx.compose.ui.res.LoadedResource
 import androidx.compose.ui.res.PendingResource
 import androidx.compose.ui.res.loadImageResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import fhnw.emoba.freezerapp.model.FreezerModel
+import fhnw.emoba.R
+import fhnw.emoba.freezerapp.data.NULL_TRACK
+import fhnw.emoba.freezerapp.model.AppModel
+import fhnw.emoba.freezerapp.model.MainMenu
+import fhnw.emoba.freezerapp.model.PlayerModel
 
-// Components
+// App components
+
+@ExperimentalAnimationApi
+@Composable
+fun MenuWithPlayBar(appModel: AppModel, playerModel: PlayerModel) {
+    Column {
+        SlideUpVertically(visible = PlayerModel.currentTrack != NULL_TRACK) {
+            PlayerBar(
+                appModel,
+                playerModel
+            )
+        }
+        Divider(color = MaterialTheme.colors.primaryVariant, thickness = 2.dp)
+        MenuBar(appModel)
+    }
+}
 
 @Composable
-fun BackBar(title: String, onBack: () -> Unit) {
-    TopAppBar(
-        title = { Text(title) },
-        navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack) } })
+fun MenuBar(model: AppModel) {
+    model.apply {
+        TabRow(
+            selectedTabIndex = selectedTab.ordinal
+        ) {
+            MainMenu.values().map { tab ->
+                Tab(
+                    selected = selectedTab == tab,
+                    onClick = { selectedTab = tab },
+                    text = { Text(tab.title) },
+                    icon = { Icon(tab.icon) }
+                )
+            }
+        }
+    }
+}
+
+// Pure components (i.e. model independent)
+
+@Composable
+fun ImageFillHeight(asset: ImageAsset, height: Dp = 0.dp) {
+    val modifier = if (height > 0.dp) Modifier.height(height) else Modifier
+    return Image(asset = asset, contentScale = ContentScale.FillHeight, modifier = modifier)
+}
+
+@Composable
+fun ImageFillWidth(asset: ImageAsset, width: Dp = 0.dp) {
+    val modifier = if (width > 0.dp) Modifier.height(width) else Modifier
+    return Image(asset = asset, contentScale = ContentScale.FillWidth, modifier = modifier)
 }
 
 @Composable
@@ -43,10 +86,15 @@ fun DrawerIcon(scaffoldState: ScaffoldState) {
 }
 
 @Composable
-fun Drawer(model: FreezerModel) {
+fun Drawer() {
     Column {
         Text("Empty Drawer")
     }
+}
+
+@Composable
+fun DeezerLogo() {
+    ImageLoadInBackground(resId = R.drawable.deezerlogo)
 }
 
 @Composable
@@ -84,6 +132,29 @@ private fun ImageLoadInBackground(@DrawableRes resId: Int) {
 }
 
 // Animations
+
+@ExperimentalAnimationApi
+@Composable
+fun SlideInRight(content: @Composable () -> Unit) {
+    AnimatedVisibility(
+        visible = true,
+        enter = slideInHorizontally(initialOffsetX = {it}),
+        exit = slideOutHorizontally(targetOffsetX = {0}),
+        content = content
+    )
+}
+
+@ExperimentalAnimationApi
+@Composable
+fun SlideOutLeft(content: @Composable () -> Unit) {
+    AnimatedVisibility(
+        visible = true,
+        enter = slideInHorizontally(initialOffsetX = {0}),
+        exit = slideOutHorizontally(targetOffsetX = {-it}),
+        content = content
+    )
+}
+
 @ExperimentalAnimationApi
 @Composable
 fun SlideUpVertically(visible: Boolean, initialOffsetY: (Int) -> Int = {it}, targetOffsetY: (Int) -> Int = {it}, content: @Composable () -> Unit) {
@@ -111,20 +182,20 @@ fun FadeInOut(visible: Boolean, initialAlpha: Float = 0.4f, content: @Composable
 // Material shortcuts
 
 @Composable
-fun MaterialText(text: String, textStyle: TextStyle, modifier: Modifier = Modifier) = Text(text, style = textStyle, modifier = modifier)
+fun MaterialText(text: String, textStyle: TextStyle, overflow: TextOverflow = TextOverflow.Clip, maxLines: Int = Int.MAX_VALUE, modifier: Modifier = Modifier) = Text(text, style = textStyle, overflow = overflow, maxLines=maxLines, modifier = modifier)
 @Composable
-fun H1(text: String, modifier: Modifier = Modifier) = MaterialText(text, MaterialTheme.typography.h1, modifier)
+fun H1(text: String, overflow: TextOverflow = TextOverflow.Clip, maxLines: Int = Int.MAX_VALUE, modifier: Modifier = Modifier) = MaterialText(text, MaterialTheme.typography.h1, overflow, maxLines, modifier)
 @Composable
-fun H2(text: String, modifier: Modifier = Modifier) = MaterialText(text, MaterialTheme.typography.h2, modifier)
+fun H2(text: String, overflow: TextOverflow = TextOverflow.Clip, maxLines: Int = Int.MAX_VALUE, modifier: Modifier = Modifier) = MaterialText(text, MaterialTheme.typography.h2, overflow, maxLines, modifier)
 @Composable
-fun H3(text: String, modifier: Modifier = Modifier) = MaterialText(text, MaterialTheme.typography.h3, modifier)
+fun H3(text: String, overflow: TextOverflow = TextOverflow.Clip, maxLines: Int = Int.MAX_VALUE, modifier: Modifier = Modifier) = MaterialText(text, MaterialTheme.typography.h3, overflow, maxLines, modifier)
 @Composable
-fun H4(text: String, modifier: Modifier = Modifier) = MaterialText(text, MaterialTheme.typography.h4, modifier)
+fun H4(text: String, overflow: TextOverflow = TextOverflow.Clip, maxLines: Int = Int.MAX_VALUE, modifier: Modifier = Modifier) = MaterialText(text, MaterialTheme.typography.h4, overflow, maxLines, modifier)
 @Composable
-fun H5(text: String, modifier: Modifier = Modifier) = MaterialText(text, MaterialTheme.typography.h5, modifier)
+fun H5(text: String, overflow: TextOverflow = TextOverflow.Clip, maxLines: Int = Int.MAX_VALUE, modifier: Modifier = Modifier) = MaterialText(text, MaterialTheme.typography.h5, overflow, maxLines, modifier)
 @Composable
-fun H6(text: String, modifier: Modifier = Modifier) = MaterialText(text, MaterialTheme.typography.h6, modifier)
+fun H6(text: String, overflow: TextOverflow = TextOverflow.Clip, maxLines: Int = Int.MAX_VALUE, modifier: Modifier = Modifier) = MaterialText(text, MaterialTheme.typography.h6, overflow, maxLines, modifier)
 @Composable
-fun Subtitle1(text: String, modifier: Modifier = Modifier) = MaterialText(text, MaterialTheme.typography.subtitle1, modifier)
+fun Subtitle1(text: String, overflow: TextOverflow = TextOverflow.Clip, maxLines: Int = Int.MAX_VALUE, modifier: Modifier = Modifier) = MaterialText(text, MaterialTheme.typography.subtitle1, overflow, maxLines, modifier)
 @Composable
-fun Subtitle2(text: String, modifier: Modifier = Modifier) = MaterialText(text, MaterialTheme.typography.subtitle2, modifier)
+fun Subtitle2(text: String, overflow: TextOverflow = TextOverflow.Clip, maxLines: Int = Int.MAX_VALUE, modifier: Modifier = Modifier) = MaterialText(text, MaterialTheme.typography.subtitle2, overflow, maxLines, modifier)

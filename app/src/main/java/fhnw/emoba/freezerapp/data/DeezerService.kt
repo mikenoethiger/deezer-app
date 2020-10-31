@@ -28,4 +28,6 @@ interface DeezerService {
     fun uniqueArtists(tracks: List<Track>): Set<Track.Artist>
 
     fun getAlbumCover(albumId: Int, size: ImageSize = ImageSize.x400): ImageAsset
+
+    fun getArtistCover(artistId: Int, size: ImageSize = ImageSize.x400): ImageAsset
 }
