@@ -7,9 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.lazy.LazyRowFor
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,6 +18,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import fhnw.emoba.freezerapp.data.Track
 import fhnw.emoba.freezerapp.model.*
+import fhnw.emoba.freezerapp.ui.screen.ArtistScreen
 import fhnw.emoba.freezerapp.ui.theme.IMAGE_MIDDLE
 
 @ExperimentalAnimationApi
@@ -27,22 +26,15 @@ import fhnw.emoba.freezerapp.ui.theme.IMAGE_MIDDLE
 fun AppUI(appModel: AppModel, playerModel: PlayerModel) {
     appModel.apply {
         MaterialTheme {
-            var mainScreen: @Composable () -> Unit = {}
-            when (selectedTab.ordinal) {
-                MainMenu.FAVORITES.ordinal -> mainScreen = {FavoriteScreen(appModel, playerModel)}
-                MainMenu.SEARCH.ordinal -> mainScreen = {SearchScreen(appModel, playerModel)}
-                MainMenu.RADIO.ordinal -> mainScreen = {RadioScreen(appModel, playerModel)}
+            var mainScreen: @Composable () -> Unit = { DeezerLogo() }
+            when (currentMenu.ordinal) {
+                MainMenu.FAVORITES.ordinal -> mainScreen = { FavoriteScreen(appModel, playerModel) }
+                MainMenu.SEARCH.ordinal -> mainScreen = { SearchScreen(appModel, playerModel) }
+                MainMenu.RADIO.ordinal -> mainScreen = { RadioScreen(appModel, playerModel) }
             }
-            screenStack
-            println("updating main screen")
-            val openSubScreen = getOpenSubScreen(selectedTab)
-            val closedSubScreen = getClosedSubScreen(selectedTab)
-            if (openSubScreen == null && closedSubScreen == null) mainScreen()
-            if (openSubScreen != null && closedSubScreen == null) {
-                // transition from main to sub screen
-                SlideOutLeft(mainScreen)
-                SlideInRight(openSubScreen)
-            }
+            val currentScreen = getCurrentNestedScreen(defaultUI = mainScreen)
+            // TODO add slide in / out animation between current and previous screen using the CrossfadeSlide function
+            currentScreen.composeFunction()
 
             SlideUpVertically(visible = isPlayerOpen) {
                 PlayerScreen(
@@ -100,18 +92,6 @@ fun SearchScreen(appModel: AppModel, playerModel: PlayerModel) {
 }
 
 @Composable
-@ExperimentalAnimationApi
-fun InterpretScreen(artist: Track.Artist, appModel: AppModel, playerModel: PlayerModel) {
-    appModel.apply {
-        Scaffold(
-            topBar = { TopAppBar(title= { Text(artist.name)}, navigationIcon = { Icon(Icons.Filled.ArrowBack) }) },
-            bottomBar = { MenuWithPlayBar(appModel, playerModel) },
-            bodyContent = { Text("To be implemented") },
-        )
-    }
-}
-
-@Composable
 private fun DefaultTopBar(scaffoldState: ScaffoldState, title: String) {
     TopAppBar(title = { Text(title) }, navigationIcon = { DrawerIcon(scaffoldState) })
 }
@@ -136,7 +116,10 @@ private fun SearchBody(appModel: AppModel, playerModel: PlayerModel) {
                 onValueChange = { newValue -> songsSearchText = newValue },
                 onSearch = { searchSongs() })
             when {
-                isLoading -> Column(modifier = Modifier.fillMaxHeight(), verticalArrangement = Arrangement.Center) {
+                isLoading -> Column(
+                    modifier = Modifier.fillMaxHeight(),
+                    verticalArrangement = Arrangement.Center
+                ) {
                     LoadingBox("Searching tracks...")
                 }
                 searchTrackList.isEmpty() -> Column(
@@ -147,10 +130,18 @@ private fun SearchBody(appModel: AppModel, playerModel: PlayerModel) {
                     val commonPadding = 10.dp
                     ScrollableColumn {
                         H5(text = "Artists", modifier = Modifier.padding(commonPadding))
-                        ArtistList(artists = searchArtists, appModel = appModel, playerModel = playerModel, modifier = Modifier.padding(start = commonPadding))
+                        ArtistListHorizontal(
+                            artists = searchArtists,
+                            appModel = appModel,
+                            playerModel = playerModel,
+                            modifier = Modifier.padding(start = commonPadding)
+                        )
                         Divider(modifier = Modifier.padding(vertical = commonPadding))
                         H5(text = "Albums", modifier = Modifier.padding(commonPadding))
-                        AlbumList(albums = searchAlbums, modifier = Modifier.padding(start = commonPadding))
+                        AlbumListHorizontal(
+                            albums = searchAlbums,
+                            modifier = Modifier.padding(start = commonPadding)
+                        )
                         Divider(modifier = Modifier.padding(vertical = commonPadding))
                         H5(text = "Tracks", modifier = Modifier.padding(commonPadding))
                         TrackList(tracks = searchTrackList, playerModel)
@@ -163,79 +154,78 @@ private fun SearchBody(appModel: AppModel, playerModel: PlayerModel) {
 
 @ExperimentalAnimationApi
 @Composable
-private fun ArtistList(appModel: AppModel, playerModel: PlayerModel, artists: List<Track.Artist>, modifier: Modifier = Modifier) {
+private fun ArtistListHorizontal(
+    appModel: AppModel,
+    playerModel: PlayerModel,
+    artists: List<Track.Artist>,
+    modifier: Modifier = Modifier
+) {
     appModel.apply {
-        LazyRowFor(items = artists, modifier = modifier) { artist ->
-            Column(
-                modifier = Modifier.padding(0.dp, 0.dp, 10.dp).width(IMAGE_MIDDLE)
-                    .clickable(onClick = { openScreen{ InterpretScreen(artist, appModel, playerModel) } }),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                ImageFillWidth(asset = artist.pictureX400, width = IMAGE_MIDDLE)
-                Text(
-                    text = artist.name,
-                    style = MaterialTheme.typography.subtitle1,
-                    overflow = TextOverflow.Ellipsis,
-                    maxLines = 1
-                )
-            }
-        }
+        HorizontalItemList(
+            items = artists,
+            onClick = {
+                val artistModel = createArtistModel(it)
+                openNestedScreen {
+                    ArtistScreen(
+                        appModel = appModel,
+                        artistModel = artistModel,
+                        playerModel = playerModel
+                    )
+                }
+            },
+            text = { it.name },
+            image = { it.pictureX400 },
+            imageSize = IMAGE_MIDDLE,
+            modifier = modifier
+        )
     }
+//    appModel.apply {
+//        LazyRowFor(items = artists, modifier = modifier) { artist ->
+//            Column(
+//                modifier = Modifier.padding(0.dp, 0.dp, 10.dp).width(IMAGE_MIDDLE)
+//                    .clickable(onClick = { openNestedScreen{ ArtistScreen(artist, appModel, playerModel) } }),
+//                verticalArrangement = Arrangement.spacedBy(10.dp)
+//            ) {
+//                ImageFillWidth(asset = artist.pictureX400, width = IMAGE_MIDDLE)
+//                Text(
+//                    text = artist.name,
+//                    style = MaterialTheme.typography.subtitle1,
+//                    overflow = TextOverflow.Ellipsis,
+//                    maxLines = 1
+//                )
+//            }
+//        }
+//    }
 }
 
 @Composable
-private fun AlbumList(albums: List<Track.Album>, modifier: Modifier = Modifier) {
-    HorizontalItemList(albums, { it.title }, { it.coverX400 }, IMAGE_MIDDLE, modifier = modifier)
+private fun AlbumListHorizontal(albums: List<Track.Album>, modifier: Modifier = Modifier) {
+    HorizontalItemList(albums, onClick={}, { it.title }, { it.coverX400 }, IMAGE_MIDDLE, modifier = modifier)
 }
 
 @Composable
 private fun <T> HorizontalItemList(
     items: List<T>,
-    getText: (T) -> String,
-    getImage: (T) -> ImageAsset,
+    onClick: (T) -> Unit,
+    text: (T) -> String,
+    image: (T) -> ImageAsset,
     imageSize: Dp = IMAGE_MIDDLE,
     modifier: Modifier = Modifier
 ) {
     LazyRowFor(items = items, modifier = modifier) { item ->
         Column(
-            modifier = Modifier.padding(0.dp, 0.dp, 10.dp).width(imageSize),
+            modifier = Modifier.padding(0.dp, 0.dp, 10.dp).width(imageSize).clickable(onClick = {onClick(item)}),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            ImageFillWidth(asset = getImage(item), width = imageSize)
+            ImageFillWidth(asset = image(item), width = imageSize)
             Text(
-                text = getText(item),
+                text = text(item),
                 style = MaterialTheme.typography.subtitle1,
                 overflow = TextOverflow.Ellipsis,
                 maxLines = 1
             )
         }
     }
-}
-
-@Composable
-private fun TrackList(tracks: List<Track>, playerModel: PlayerModel) {
-    tracks.forEach { track ->
-        track.album.coverX120
-        TrackListItem(track = track, onTrackClick = {
-            playerModel.trackList = tracks
-            playerModel.loadTrack(track)
-            playerModel.play()
-        })
-    }
-}
-
-@Composable
-private fun TrackListItem(track: Track, onTrackClick: () -> Unit = {}) {
-    ListItem(
-        text = { Text(track.title) },
-        secondaryText = { Text(track.artist.name) },
-        icon = {
-            Image(asset = track.album.coverX120)
-        },
-        trailing = { IconButton(onClick = {}) { Icon(Icons.Filled.MoreVert) } },
-        modifier = Modifier.clickable(onClick = onTrackClick)
-    )
-    Divider()
 }
 
 @Composable

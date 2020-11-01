@@ -3,10 +3,16 @@ package fhnw.emoba.freezerapp.data.impl
 import androidx.compose.ui.graphics.ImageAsset
 import androidx.compose.ui.graphics.asImageAsset
 import fhnw.emoba.freezerapp.data.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.lang.StringBuilder
 
 object RemoteDeezerService : DeezerService {
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     private const val baseURL = "https://api.deezer.com"
     private const val baseURLAlbum = "$baseURL/album"
     private const val baseURLArtist = "$baseURL/artist"
@@ -30,6 +36,33 @@ object RemoteDeezerService : DeezerService {
         return apiSearch(URLEncode(q.toString()), fuzzyMode)
     }
 
+    override fun loadTopTracks(artist: Track.Artist, limit: Int, index: Int): List<Track> {
+        val url = artist.getTrackListLink(limit, index)
+        return JSONObject(content(url)).getJSONArray("data").map { Track(it) }
+    }
+
+    override fun loadArtist(artistId: Int): Track.Artist {
+        val url = "$baseURLArtist/$artistId"
+        return Track.Artist(JSONObject(content(url)))
+    }
+
+    override fun loadAlbumCoversAsync(tracks: List<Track>) {
+        serviceScope.launch {
+            tracks.forEach {
+                it.album.coverX400 = getAlbumCover(it.album.id, ImageSize.x400)
+                it.album.coverX120 = getAlbumCover(it.album.id, ImageSize.x120)
+            }
+        }
+    }
+
+    override fun loadArtistCoversAsync(tracks: List<Track>) {
+        serviceScope.launch {
+            tracks.forEach {
+                it.artist.pictureX400 = getArtistCover(it.artist.id, ImageSize.x400)
+            }
+        }
+    }
+
     override fun uniqueAlbums(tracks: List<Track>): Set<Track.Album> {
         val albums = mutableSetOf<Track.Album>()
         tracks.forEach{albums.add(it.album)}
@@ -42,16 +75,6 @@ object RemoteDeezerService : DeezerService {
         return artists
     }
 
-    /**
-     * @param q url encoded query string
-     */
-    private fun apiSearch(q: String, fuzzyMode: Boolean): List<Track> {
-        val strict = if (fuzzyMode) "off" else "on"
-        val url = "$baseURL/search?q=$q&strict=$strict"
-        // make API request and map result to SearchResults
-        return JSONObject(content(url)).getJSONArray("data").map { Track(it) }
-    }
-
     override fun getAlbumCover(albumId: Int, size: ImageSize): ImageAsset {
         // TODO improve by caching covers locally
         val url = "$baseURLAlbum/$albumId/image?size=${size.identifier}"
@@ -61,6 +84,16 @@ object RemoteDeezerService : DeezerService {
     override fun getArtistCover(artistId: Int, size: ImageSize): ImageAsset {
         val url = "$baseURLArtist/$artistId/image?size=${size.identifier}"
         return getImage(url)
+    }
+
+    /**
+     * @param q url encoded query string
+     */
+    private fun apiSearch(q: String, fuzzyMode: Boolean): List<Track> {
+        val strict = if (fuzzyMode) "off" else "on"
+        val url = "$baseURL/search?q=$q&strict=$strict"
+        // make API request and map result to SearchResults
+        return JSONObject(content(url)).getJSONArray("data").map { Track(it) }
     }
 
     private fun getImage(url: String): ImageAsset {

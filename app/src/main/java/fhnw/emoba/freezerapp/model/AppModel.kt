@@ -5,7 +5,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import fhnw.emoba.freezerapp.data.DeezerService
-import fhnw.emoba.freezerapp.data.ImageSize
 import fhnw.emoba.freezerapp.data.Track
 import kotlinx.coroutines.*
 
@@ -15,7 +14,7 @@ class AppModel(private val deezerService: DeezerService) {
     val appTitle = "Freezer App"
     var isPlayerOpen by mutableStateOf(false)
 
-    var selectedTab: MainMenu by mutableStateOf(MainMenu.SEARCH)
+    var currentMenu: MainMenu by mutableStateOf(MainMenu.SEARCH)
 
     var isLoading by mutableStateOf(false)
 
@@ -24,22 +23,30 @@ class AppModel(private val deezerService: DeezerService) {
     var searchArtists: List<Track.Artist> by mutableStateOf(emptyList())
     var searchAlbums: List<Track.Album> by mutableStateOf(emptyList())
 
-    var screenStack: List<Screen> by mutableStateOf(emptyList())
+    private var nestedScreens: MutableMap<MainMenu, List<Screen>> = mutableMapOf()
+    var currentNestedScreen: Map<MainMenu, Screen> by mutableStateOf(mapOf())
 
-    fun getOpenSubScreen(mainMenu: MainMenu): (@Composable () -> Unit)? {
-        screenStack.reversed().forEach {
-            if (it.visible) return it.composeFunction
-        }
-        return null
+    fun getCurrentNestedScreen(defaultUI: @Composable () -> Unit): Screen {
+        if (!currentNestedScreen.containsKey(currentMenu)) return Screen(defaultUI, true)
+        return currentNestedScreen[currentMenu]!!
     }
-    fun getClosedSubScreen(mainMenu: MainMenu): (@Composable () -> Unit)? {
-        screenStack.forEach {
-            if (!it.visible) return it.composeFunction
+    fun closeNestedScreen() {
+        if (!nestedScreens.containsKey(currentMenu)) return
+        if (nestedScreens[currentMenu]!!.isEmpty()) return
+        if (nestedScreens[currentMenu]!!.size == 1) {
+            nestedScreens[currentMenu] = emptyList()
+            currentNestedScreen = currentNestedScreen.minus(currentMenu)
+        } else {
+            nestedScreens[currentMenu]!!.dropLast(1)
+            val newLast = nestedScreens[currentMenu]!!.last().copy(isOpeningTransition = false)
+            currentNestedScreen = currentNestedScreen.plus(Pair(currentMenu, newLast))
         }
-        return null
     }
-    fun openScreen(screen: @Composable () -> Unit) {
-        screenStack = screenStack.plus(Screen(screen, true))
+    fun openNestedScreen(ui: @Composable () -> Unit) {
+        nestedScreens.putIfAbsent(currentMenu, emptyList())
+        val screen = Screen(ui, true)
+        nestedScreens[currentMenu] = nestedScreens[currentMenu]!!.plus(screen)
+        currentNestedScreen = currentNestedScreen.plus(Pair(currentMenu, screen))
     }
 
     fun searchSongs() {
@@ -51,22 +58,20 @@ class AppModel(private val deezerService: DeezerService) {
             searchArtists = deezerService.uniqueArtists(searchTrackList).toList()
             searchAlbums = deezerService.uniqueAlbums(searchTrackList).toList()
             isLoading = false
-            loadCovers(searchTrackList)
+            deezerService.loadAlbumCoversAsync(searchTrackList)
+            deezerService.loadArtistCoversAsync(searchTrackList)
         }
     }
 
-    private fun loadCovers(tracks: List<Track>) {
-        tracks.forEach {
-            modelScope.launch {
-                it.album.coverX400 = deezerService.getAlbumCover(it.album.id, ImageSize.x400)
-                it.album.coverX120 = deezerService.getAlbumCover(it.album.id, ImageSize.x120)
-                // it.artist.pictureX120 = deezerService.getArtistCover(it.artist.id, ImageSize.x120)
-                it.artist.pictureX400 = deezerService.getArtistCover(it.artist.id, ImageSize.x400)
-//                it.album.coverX1000 = deezerService.getAlbumCover(it.album.id, ImageSize.x1000)
-            }
-        }
+    fun createArtistModel(artist: Track.Artist): ArtistModel {
+        println("creating artist model")
+        return ArtistModel(deezerService, artist)
     }
+
 }
 
-class Screen(val composeFunction: @Composable () -> Unit, var visible: Boolean)
+// if isOpeningTransition is true, then the transition is meant to open the screen, otherwise close the screen
+// might be relevant for animation, for example closing transitions may want to slide in the visible screen from left to right
+// while opening transition may want to slide in the visible screen from right to left
+data class Screen(val composeFunction: @Composable () -> Unit, val isOpeningTransition: Boolean)
 class ScreenTransition(val newScreen: () -> Unit, val oldScreen: (() -> Unit) ? = null, val forward: Boolean = true)

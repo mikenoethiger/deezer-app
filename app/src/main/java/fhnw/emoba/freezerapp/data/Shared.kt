@@ -11,11 +11,17 @@ import javax.net.ssl.HttpsURLConnection
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.os.Debug
+import android.util.Log
 import androidx.compose.ui.graphics.ImageAsset
 import androidx.compose.ui.graphics.asImageAsset
 import java.net.URLEncoder
+import java.text.NumberFormat
 
-fun content(url: String) : String = content(streamFrom(url))
+fun content(url: String) : String {
+    Log.d("HTTP Request","GET $url")
+    return content(streamFrom(url))
+}
 
 fun content(fileName: String, context: Context): String = content(context.assets.open(fileName))
 
@@ -23,7 +29,7 @@ fun content(inputStream: InputStream): String {
     val reader = BufferedReader(InputStreamReader(inputStream, StandardCharsets.UTF_8))
     val jsonString = reader.readText()
     reader.close()
-    
+
     return jsonString
 }
 
@@ -36,7 +42,7 @@ fun bitmap(url: String) = bitmap(streamFrom(url))
 fun bitmap(inputStream: InputStream) : Bitmap {
     val bitmapAsBytes = inputStream.readBytes()
     inputStream.close()
-    
+
     return BitmapFactory.decodeByteArray(bitmapAsBytes, 0, bitmapAsBytes.size)
 }
 
@@ -51,7 +57,7 @@ fun <T> JSONArray.map(transform: (JSONObject) -> T): List<T>{
 fun streamFrom(url: String): InputStream {
     val conn = URL(url).openConnection() as HttpsURLConnection
     conn.connect()
-    
+
     return conn.inputStream
 }
 
@@ -80,3 +86,5 @@ fun formatDuration(seconds: Int): String {
     if (hours != 0) return hours.toString() + ":" + String.format("%02d", mins) + ":" + String.format("%02d", secs)
     return mins.toString() + ":" + String.format("%02d", secs)
 }
+
+fun formatNumber(n: Int) = NumberFormat.getIntegerInstance().format(n)

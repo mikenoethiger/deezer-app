@@ -5,10 +5,13 @@ import androidx.compose.animation.*
 import androidx.compose.foundation.Icon
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.Text
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,6 +28,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import fhnw.emoba.R
 import fhnw.emoba.freezerapp.data.NULL_TRACK
+import fhnw.emoba.freezerapp.data.Track
 import fhnw.emoba.freezerapp.model.AppModel
 import fhnw.emoba.freezerapp.model.MainMenu
 import fhnw.emoba.freezerapp.model.PlayerModel
@@ -50,18 +54,56 @@ fun MenuWithPlayBar(appModel: AppModel, playerModel: PlayerModel) {
 fun MenuBar(model: AppModel) {
     model.apply {
         TabRow(
-            selectedTabIndex = selectedTab.ordinal
+            selectedTabIndex = currentMenu.ordinal
         ) {
             MainMenu.values().map { tab ->
                 Tab(
-                    selected = selectedTab == tab,
-                    onClick = { selectedTab = tab },
+                    selected = currentMenu == tab,
+                    onClick = { currentMenu = tab },
                     text = { Text(tab.title) },
                     icon = { Icon(tab.icon) }
                 )
             }
         }
     }
+}
+
+@Composable
+fun BackBar(text: String, onBack: () -> Unit) {
+    TopAppBar(title = { Text(text) }, navigationIcon = {
+        IconButton(onClick = onBack) {
+            Icon (Icons.Filled.KeyboardArrowLeft)
+        }
+    })
+}
+
+@Composable
+fun TrackList(tracks: List<Track>, playerModel: PlayerModel, subtitle: (Track) -> String = {it.artist.name}, showIndex: Boolean = false) {
+    tracks.forEachIndexed { index, track ->
+        track.album.coverX120
+        TrackListItem(track = track, index=index, onTrackClick = {
+            playerModel.trackList = tracks
+            playerModel.loadTrack(track)
+            playerModel.play()
+        }, subtitle = subtitle, showIndex = showIndex)
+    }
+}
+
+@Composable
+private fun TrackListItem(track: Track, index: Int, onTrackClick: () -> Unit = {}, subtitle: (Track) -> String = {it.artist.name}, showIndex: Boolean = false) {
+    ListItem(
+        text = { Text(track.title) },
+        secondaryText = { Text(subtitle(track)) },
+        icon = {
+            Row {
+                if (showIndex) Text(text = "${index+1}", modifier = Modifier.align(Alignment.CenterVertically).padding(end = 15.dp))
+                Image(asset = track.album.coverX120)
+            }
+        },
+        trailing = { IconButton(onClick = {}) { Icon(Icons.Filled.MoreVert) } },
+        modifier = Modifier.clickable(onClick = onTrackClick)
+    )
+    Divider()
 }
 
 // Pure components (i.e. model independent)
@@ -132,28 +174,6 @@ private fun ImageLoadInBackground(@DrawableRes resId: Int) {
 }
 
 // Animations
-
-@ExperimentalAnimationApi
-@Composable
-fun SlideInRight(content: @Composable () -> Unit) {
-    AnimatedVisibility(
-        visible = true,
-        enter = slideInHorizontally(initialOffsetX = {it}),
-        exit = slideOutHorizontally(targetOffsetX = {0}),
-        content = content
-    )
-}
-
-@ExperimentalAnimationApi
-@Composable
-fun SlideOutLeft(content: @Composable () -> Unit) {
-    AnimatedVisibility(
-        visible = true,
-        enter = slideInHorizontally(initialOffsetX = {0}),
-        exit = slideOutHorizontally(targetOffsetX = {-it}),
-        content = content
-    )
-}
 
 @ExperimentalAnimationApi
 @Composable

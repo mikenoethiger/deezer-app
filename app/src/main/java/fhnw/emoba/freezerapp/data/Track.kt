@@ -28,12 +28,23 @@ class Track(searchJSONObject: JSONObject) {
     class Artist(albumObject: JSONObject) {
         val id = albumObject.getInt("id")
         val name = albumObject.getString("name")
-        val link = albumObject.getString("link")
-        val pictureLink = albumObject.getString("picture")
+        val link = if (albumObject.has("link")) albumObject.getString("link") else ""
+        val pictureLink = if (albumObject.has("picture")) albumObject.getString("picture") else ""
+        val nbFan = if (albumObject.has("nb_fan")) albumObject.getInt("nb_fan") else 0
         // view model will trigger the pricture loading
         var pictureX120: ImageAsset by mutableStateOf(ImageSize.x120.defaultImage)
         var pictureX400: ImageAsset by mutableStateOf(ImageSize.x400.defaultImage)
         val tracklist = albumObject.getString("tracklist")
+
+        /**
+         * Get trackList link for top `n` tracks
+         * @param limit number of tracks to load
+         * @param index offset, i.e. load `limit` tracks starting at `index`
+         */
+        fun getTrackListLink(limit: Int, index: Int): String {
+            val baseUrl = tracklist.split("?")[0]
+            return "$baseUrl?limit=$limit&index=$index"
+        }
 
         override fun equals(other: Any?): Boolean {
             if (other == null || other !is Artist) return false
@@ -47,7 +58,7 @@ class Track(searchJSONObject: JSONObject) {
     val titleShort     = searchJSONObject.getString("title_short") // The track's short title
     val link           = searchJSONObject.getString("link") // The url of the track on Deezer
     val duration       = searchJSONObject.getInt("duration") // The track's duration in seconds
-    val rank           = searchJSONObject.getLong("rank") // The track's Deezer rank
+    val rank           = searchJSONObject.getInt("rank") // The track's Deezer rank
     val explicitLyrics = searchJSONObject.getBoolean("explicit_lyrics") // Whether the track contains explicit lyrics
     val preview        = searchJSONObject.getString("preview") // The url of track's preview file. This file contains the first 30 seconds of the track
     val artist         = Artist(searchJSONObject.getJSONObject("artist")) // artist object containing : id, name, link, picture, picture_small, picture_medium, picture_big, picture_xl
