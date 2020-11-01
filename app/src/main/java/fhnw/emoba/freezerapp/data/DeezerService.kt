@@ -9,7 +9,7 @@ interface DeezerService {
      * @param query
      * @param fuzzyMode weaker search when fuzzy mode is enabled, i.e. more tracks are likely to match the query
      */
-    fun search(query: String, fuzzyMode: Boolean = false): List<Track>
+    fun search(query: String, fuzzyMode: Boolean = false, order: SearchOrder = SearchOrder.RANKING): List<Track>
 
     /**
      * Perform extended search for tracks as described at https://developers.deezer.com/api/search
@@ -18,7 +18,8 @@ interface DeezerService {
      */
     fun extendedSearch(
         queryParameters: Map<String, String>,
-        fuzzyMode: Boolean = false
+        fuzzyMode: Boolean = false,
+        order: SearchOrder = SearchOrder.RANKING
     ): List<Track>
 
     /**
@@ -31,19 +32,30 @@ interface DeezerService {
     fun loadArtist(artistId: Int): Track.Artist
 
     fun loadAlbumCoversAsync(tracks: List<Track>)
+    fun loadAlbumCoversAsync2(albums: List<Track.Album>)
     fun loadArtistCoversAsync(tracks: List<Track>)
 
     /**
-     * Get unique albums from a search result
+     * Extract unique albums from a list of tracks
      */
     fun uniqueAlbums(tracks: List<Track>): Set<Track.Album>
 
     /**
-     * Get unique artists from a search result
+     * Extract unique artists from a search result
      */
     fun uniqueArtists(tracks: List<Track>): Set<Track.Artist>
+    fun uniqueContributors(tracks: List<Track>): Set<Track.Artist>
 
     fun getAlbumCover(albumId: Int, size: ImageSize = ImageSize.x400): ImageAsset
 
     fun getArtistCover(artistId: Int, size: ImageSize = ImageSize.x400): ImageAsset
+}
+
+enum class SearchOrder {
+    RANKING,
+    TRACK_ASC, TRACK_DESC,
+    ARTIST_ASC, ARTIST_DESC,
+    ALBUM_ASC, ALBUM_DESC,
+    RATING_ASC, RATING_DESC,
+    DURATION_ASC, DURATION_DESC
 }

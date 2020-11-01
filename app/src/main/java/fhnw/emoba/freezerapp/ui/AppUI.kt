@@ -23,13 +23,13 @@ import fhnw.emoba.freezerapp.ui.theme.IMAGE_MIDDLE
 
 @ExperimentalAnimationApi
 @Composable
-fun AppUI(appModel: AppModel, playerModel: PlayerModel) {
+fun AppUI(appModel: AppModel, playerModel: PlayerModel, artistModel: ArtistModel) {
     appModel.apply {
         MaterialTheme {
             var mainScreen: @Composable () -> Unit = { DeezerLogo() }
             when (currentMenu.ordinal) {
                 MainMenu.FAVORITES.ordinal -> mainScreen = { FavoriteScreen(appModel, playerModel) }
-                MainMenu.SEARCH.ordinal -> mainScreen = { SearchScreen(appModel, playerModel) }
+                MainMenu.SEARCH.ordinal -> mainScreen = { SearchScreen(appModel, playerModel, artistModel = artistModel) }
                 MainMenu.RADIO.ordinal -> mainScreen = { RadioScreen(appModel, playerModel) }
             }
             val currentScreen = getCurrentNestedScreen(defaultUI = mainScreen)
@@ -78,13 +78,13 @@ fun RadioScreen(appModel: AppModel, playerModel: PlayerModel) {
 
 @ExperimentalAnimationApi
 @Composable
-fun SearchScreen(appModel: AppModel, playerModel: PlayerModel) {
+fun SearchScreen(appModel: AppModel, playerModel: PlayerModel, artistModel: ArtistModel) {
     val scaffoldState = rememberScaffoldState()
     appModel.apply {
         Scaffold(
             scaffoldState = scaffoldState,
             bottomBar = { MenuWithPlayBar(appModel, playerModel) },
-            bodyContent = { SearchBody(appModel, playerModel) },
+            bodyContent = { SearchBody(appModel = appModel, playerModel = playerModel, artistModel = artistModel) },
             drawerContent = { Drawer() },
             floatingActionButtonPosition = FabPosition.End,
         )
@@ -108,7 +108,7 @@ private fun MessageBox(text: String) {
 
 @ExperimentalAnimationApi
 @Composable
-private fun SearchBody(appModel: AppModel, playerModel: PlayerModel) {
+private fun SearchBody(appModel: AppModel, playerModel: PlayerModel, artistModel: ArtistModel) {
     appModel.apply {
         Column {
             SearchTextField(
@@ -134,6 +134,7 @@ private fun SearchBody(appModel: AppModel, playerModel: PlayerModel) {
                             artists = searchArtists,
                             appModel = appModel,
                             playerModel = playerModel,
+                            artistModel = artistModel,
                             modifier = Modifier.padding(start = commonPadding)
                         )
                         Divider(modifier = Modifier.padding(vertical = commonPadding))
@@ -148,82 +149,6 @@ private fun SearchBody(appModel: AppModel, playerModel: PlayerModel) {
                     }
                 }
             }
-        }
-    }
-}
-
-@ExperimentalAnimationApi
-@Composable
-private fun ArtistListHorizontal(
-    appModel: AppModel,
-    playerModel: PlayerModel,
-    artists: List<Track.Artist>,
-    modifier: Modifier = Modifier
-) {
-    appModel.apply {
-        HorizontalItemList(
-            items = artists,
-            onClick = {
-                val artistModel = createArtistModel(it)
-                openNestedScreen {
-                    ArtistScreen(
-                        appModel = appModel,
-                        artistModel = artistModel,
-                        playerModel = playerModel
-                    )
-                }
-            },
-            text = { it.name },
-            image = { it.pictureX400 },
-            imageSize = IMAGE_MIDDLE,
-            modifier = modifier
-        )
-    }
-//    appModel.apply {
-//        LazyRowFor(items = artists, modifier = modifier) { artist ->
-//            Column(
-//                modifier = Modifier.padding(0.dp, 0.dp, 10.dp).width(IMAGE_MIDDLE)
-//                    .clickable(onClick = { openNestedScreen{ ArtistScreen(artist, appModel, playerModel) } }),
-//                verticalArrangement = Arrangement.spacedBy(10.dp)
-//            ) {
-//                ImageFillWidth(asset = artist.pictureX400, width = IMAGE_MIDDLE)
-//                Text(
-//                    text = artist.name,
-//                    style = MaterialTheme.typography.subtitle1,
-//                    overflow = TextOverflow.Ellipsis,
-//                    maxLines = 1
-//                )
-//            }
-//        }
-//    }
-}
-
-@Composable
-private fun AlbumListHorizontal(albums: List<Track.Album>, modifier: Modifier = Modifier) {
-    HorizontalItemList(albums, onClick={}, { it.title }, { it.coverX400 }, IMAGE_MIDDLE, modifier = modifier)
-}
-
-@Composable
-private fun <T> HorizontalItemList(
-    items: List<T>,
-    onClick: (T) -> Unit,
-    text: (T) -> String,
-    image: (T) -> ImageAsset,
-    imageSize: Dp = IMAGE_MIDDLE,
-    modifier: Modifier = Modifier
-) {
-    LazyRowFor(items = items, modifier = modifier) { item ->
-        Column(
-            modifier = Modifier.padding(0.dp, 0.dp, 10.dp).width(imageSize).clickable(onClick = {onClick(item)}),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            ImageFillWidth(asset = image(item), width = imageSize)
-            Text(
-                text = text(item),
-                style = MaterialTheme.typography.subtitle1,
-                overflow = TextOverflow.Ellipsis,
-                maxLines = 1
-            )
         }
     }
 }

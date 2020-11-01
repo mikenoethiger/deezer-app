@@ -4,74 +4,89 @@ import androidx.compose.runtime.mutableStateOf
 import fhnw.emoba.freezerapp.data.DeezerService
 import fhnw.emoba.freezerapp.data.Track
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.setValue
+import fhnw.emoba.freezerapp.data.NULL_ARTIST
 import kotlinx.coroutines.*
-import java.lang.IllegalStateException
+import java.util.*
+import java.util.concurrent.CountDownLatch
 
-class ArtistModel(private val deezerService: DeezerService, val artist: Track.Artist) {
+class ArtistModel(private val deezerService: DeezerService) {
     private val modelScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    private var artistHistory: Stack<Track.Artist> = Stack()
+
+    private var currentArtist: Track.Artist by mutableStateOf(NULL_ARTIST)
     var top5Tracks: List<Track> by mutableStateOf(emptyList())
-    var top5TracksLoaded by mutableStateOf(false)
+    var top5TracksLoading by mutableStateOf(false)
     var moreTracks: List<Track> by mutableStateOf(emptyList())
-    var moreTracksLoaded by mutableStateOf(false)
-    var artistFans by mutableStateOf(artist.nbFan)
+    var moreTracksLoading by mutableStateOf(false)
+    var albums: List<Track.Album> by mutableStateOf(emptyList())
+    var albumsLoading by mutableStateOf(false)
+    var contributors: List<Track.Artist> by mutableStateOf(emptyList())
 
-    init {
-        println("running init")
-        loadArtistFans()
-        loadTop5Tracks()
-        loadMoreTracks()
+    fun getArtist(): Track.Artist {
+        return currentArtist
+    }
+    fun setArtist(artist: Track.Artist) {
+        artistHistory.push(artist)
+        currentArtist = artist
+        contributors = emptyList()
+        loadNbFanAsync()
+        loadTop5TracksAsync()
+        loadMoreTracksAsync()
+        loadAlbumsAsync()
+    }
+    fun setPreviousArtist() {
+        if (artistHistory.isEmpty()) return
+        currentArtist = artistHistory.pop()
     }
 
-    private fun loadArtistFans() {
-        // it is possible that the Track.Artist instance passed in the constructor does not contain the nbFans attribute,
-        // some endpoints such as search return a list of tracks with the artist for each track, but not all artist data
-        // is given, such as for instance the nbFans
-        if (artistFans == 0) {
+    private fun loadNbFanAsync() {
+        // It is possible that the currentArtist instance does not contain all artist attributes,
+        // some deezer API endpoints such as the search return a list of tracks with the artist for each track,
+        // but not all artist attributes are present, such as for instance the nbFans
+        if (currentArtist.nbFan == 0) {
             modelScope.launch {
-                waitUntilMutableStateReadable()
-                artistFans = deezerService.loadArtist(artist.id).nbFan
+                val artist = deezerService.loadArtist(currentArtist.id)
+                currentArtist.nbFan = artist.nbFan
             }
         }
     }
 
-    private fun loadTop5Tracks() {
-        if (top5TracksLoaded) return
+    private fun loadTop5TracksAsync() {
+        top5TracksLoading = true
         modelScope.launch {
-            waitUntilMutableStateReadable()
-            top5Tracks = deezerService.loadTopTracks(artist, limit=5, index=0)
-            top5TracksLoaded = true
+            top5Tracks = deezerService.loadTopTracks(currentArtist, limit=5, index=0)
+            top5TracksLoading = false
+            refreshContributors()
             deezerService.loadAlbumCoversAsync(top5Tracks)
+            deezerService.loadArtistCoversAsync(top5Tracks)
         }
     }
 
-    private fun loadMoreTracks() {
-        if (moreTracksLoaded) return
+    private fun loadMoreTracksAsync() {
+        moreTracksLoading = true
         modelScope.launch {
-            waitUntilMutableStateReadable()
-            moreTracks = deezerService.loadTopTracks(artist, limit=30, index=5)
-            moreTracksLoaded = true
+            moreTracks = deezerService.loadTopTracks(currentArtist, limit=30, index=5)
+            moreTracksLoading = false
+            refreshContributors()
             deezerService.loadAlbumCoversAsync(moreTracks)
+            deezerService.loadArtistCoversAsync(moreTracks)
         }
     }
 
-    private suspend fun waitUntilMutableStateReadable() {
-        // Experience showed, that when accessing a mutableStateOf() variable from a coroutine,
-        // short after the object has been created, the following IllegalStateException is thrown:
-        // "Reading a state that was created after the snapshot was taken or in a snapshot that has not yet been applied"
-        // No better solution than the one presented in this function could be found yet.
-        // In this function we try to access a mutable variable as long as the IllegalStateException is thrown.
-        var ready = false
-        while (!ready) {
-            try {
-                artistFans = artistFans
-                ready = true
-            } catch (e: IllegalStateException) {
-                // experiments showed, that a wait of 10ms makes the while loop iterate only twice
-                // without the delay, there were ~550 iterations
-                delay(10)
-            }
+    private fun loadAlbumsAsync() {
+        albumsLoading = true
+        modelScope.launch {
+            val tracks = deezerService.extendedSearch(mapOf(Pair("artist", currentArtist.name)))
+            albums = deezerService.uniqueAlbums(tracks).toList()
+            albumsLoading = false
+            deezerService.loadAlbumCoversAsync2(albums)
         }
+    }
+
+    private fun refreshContributors() {
+        contributors =  deezerService.uniqueContributors(top5Tracks.plus(moreTracks)).toList()
     }
 }

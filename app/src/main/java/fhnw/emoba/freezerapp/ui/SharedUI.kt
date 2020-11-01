@@ -7,6 +7,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.Text
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
@@ -30,8 +31,11 @@ import fhnw.emoba.R
 import fhnw.emoba.freezerapp.data.NULL_TRACK
 import fhnw.emoba.freezerapp.data.Track
 import fhnw.emoba.freezerapp.model.AppModel
+import fhnw.emoba.freezerapp.model.ArtistModel
 import fhnw.emoba.freezerapp.model.MainMenu
 import fhnw.emoba.freezerapp.model.PlayerModel
+import fhnw.emoba.freezerapp.ui.screen.ArtistScreen
+import fhnw.emoba.freezerapp.ui.theme.IMAGE_MIDDLE
 
 // App components
 
@@ -70,11 +74,64 @@ fun MenuBar(model: AppModel) {
 
 @Composable
 fun BackBar(text: String, onBack: () -> Unit) {
-    TopAppBar(title = { Text(text) }, navigationIcon = {
+    TopAppBar(title = { Text(text, overflow = TextOverflow.Ellipsis, maxLines = 1) }, navigationIcon = {
         IconButton(onClick = onBack) {
             Icon (Icons.Filled.KeyboardArrowLeft)
         }
     })
+}
+
+@Composable
+fun AlbumListHorizontal(albums: List<Track.Album>, modifier: Modifier = Modifier) {
+    HorizontalItemList(albums, onClick={}, { it.title }, { it.coverX400 }, IMAGE_MIDDLE, modifier = modifier)
+}
+
+@ExperimentalAnimationApi
+@Composable
+fun ArtistListHorizontal(
+    appModel: AppModel,
+    playerModel: PlayerModel,
+    artistModel: ArtistModel,
+    artists: List<Track.Artist>,
+    modifier: Modifier = Modifier
+) {
+    appModel.apply {
+        HorizontalItemList(artists, onClick={ artist ->
+            artistModel.setArtist(artist)
+            openNestedScreen {
+                ArtistScreen(
+                    appModel = appModel,
+                    artistModel = artistModel,
+                    playerModel = playerModel
+                )
+            }
+        }, { it.name }, { it.pictureX400 }, IMAGE_MIDDLE, modifier = modifier)
+    }
+}
+
+@Composable
+private fun <T> HorizontalItemList(
+    items: List<T>,
+    onClick: (T) -> Unit,
+    text: (T) -> String,
+    image: (T) -> ImageAsset,
+    imageSize: Dp = IMAGE_MIDDLE,
+    modifier: Modifier = Modifier
+) {
+    LazyRowFor(items = items, modifier = modifier) { item ->
+        Column(
+            modifier = Modifier.padding(0.dp, 0.dp, 10.dp).width(imageSize).clickable(onClick = {onClick(item)}),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            ImageFillWidth(asset = image(item), width = imageSize)
+            Text(
+                text = text(item),
+                style = MaterialTheme.typography.subtitle1,
+                overflow = TextOverflow.Ellipsis,
+                maxLines = 1
+            )
+        }
+    }
 }
 
 @Composable

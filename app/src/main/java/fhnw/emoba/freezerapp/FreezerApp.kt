@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import fhnw.emoba.EmobaApp
 import fhnw.emoba.freezerapp.data.impl.RemoteDeezerService
 import fhnw.emoba.freezerapp.model.AppModel
+import fhnw.emoba.freezerapp.model.ArtistModel
 import fhnw.emoba.freezerapp.model.PlayerModel
 import fhnw.emoba.freezerapp.ui.AppUI
 
@@ -22,7 +23,8 @@ object FreezerApp : EmobaApp {
         val deezerService = RemoteDeezerService
         val playerModel = PlayerModel
         val appModel = AppModel(deezerService)
-        AppUI(appModel, playerModel)
+        val artistModel = ArtistModel(deezerService)
+        AppUI(appModel, playerModel, artistModel)
     }
 
 }

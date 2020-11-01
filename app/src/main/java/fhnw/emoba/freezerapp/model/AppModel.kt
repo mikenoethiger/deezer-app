@@ -57,15 +57,10 @@ class AppModel(private val deezerService: DeezerService) {
             searchTrackList = deezerService.search(songsSearchText)
             searchArtists = deezerService.uniqueArtists(searchTrackList).toList()
             searchAlbums = deezerService.uniqueAlbums(searchTrackList).toList()
-            isLoading = false
             deezerService.loadAlbumCoversAsync(searchTrackList)
             deezerService.loadArtistCoversAsync(searchTrackList)
+            isLoading = false
         }
-    }
-
-    fun createArtistModel(artist: Track.Artist): ArtistModel {
-        println("creating artist model")
-        return ArtistModel(deezerService, artist)
     }
 
 }
