@@ -3,6 +3,7 @@ package fhnw.emoba.freezerapp
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.foundation.lazy.ExperimentalLazyDsl
 import androidx.compose.runtime.Composable
 import fhnw.emoba.EmobaApp
 import fhnw.emoba.freezerapp.data.impl.RemoteDeezerService
@@ -17,6 +18,7 @@ object FreezerApp : EmobaApp {
     override fun initialize(activity: ComponentActivity, savedInstanceState: Bundle?) {
     }
 
+    @ExperimentalLazyDsl
     @ExperimentalAnimationApi
     @Composable
     override fun createAppUI() {

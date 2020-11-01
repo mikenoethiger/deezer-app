@@ -2,9 +2,9 @@ package fhnw.emoba.freezerapp.ui.screen
 
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.ScrollableColumn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.ExperimentalLazyDsl
 import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Scaffold
@@ -15,13 +15,13 @@ import androidx.compose.ui.graphics.VerticalGradient
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import fhnw.emoba.freezerapp.data.Album
 import fhnw.emoba.freezerapp.data.formatNumber
 import fhnw.emoba.freezerapp.model.AppModel
 import fhnw.emoba.freezerapp.model.ArtistModel
 import fhnw.emoba.freezerapp.model.PlayerModel
 import fhnw.emoba.freezerapp.ui.*
 
+@ExperimentalLazyDsl
 @Composable
 @ExperimentalAnimationApi
 fun ArtistScreen(appModel: AppModel, artistModel: ArtistModel, playerModel: PlayerModel) {
@@ -34,6 +34,7 @@ fun ArtistScreen(appModel: AppModel, artistModel: ArtistModel, playerModel: Play
     }
 }
 
+@ExperimentalLazyDsl
 @ExperimentalAnimationApi
 @Composable
 private fun ArtistBody(appModel: AppModel, artistModel: ArtistModel, playerModel: PlayerModel) {
@@ -41,8 +42,8 @@ private fun ArtistBody(appModel: AppModel, artistModel: ArtistModel, playerModel
         val artist = getArtist()
         Box {
             Image(asset = artist.pictureX400, modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp), contentScale = ContentScale.FillWidth)
-            ScrollableColumn{
-                Column(modifier = Modifier.padding(top = 200.dp)){}
+            LazyTrackList(tracks = artistModel.moreTracks, playerModel = playerModel) {
+                Box(modifier = Modifier.padding(top = 200.dp)){}
                 Column(modifier = Modifier
                     .background(VerticalGradient(listOf(Color.Transparent, MaterialTheme.colors.background), 0f, 350f))
                     .padding(top = 50.dp)
@@ -55,28 +56,46 @@ private fun ArtistBody(appModel: AppModel, artistModel: ArtistModel, playerModel
                         Subtitle1(text = "$fans fans", modifier = Modifier.padding(start = 10.dp))
                     }
                     Divider(modifier = Modifier.padding(vertical = 10.dp))
-                    H5(text = "Top Tracks", modifier = Modifier.padding(start = 10.dp))
-                    Column {
-                        TrackList(tracks = artistModel.top5Tracks, playerModel = playerModel, subtitle = { track ->
-                            "Rank ${formatNumber(track.rank)}"
-                        }, showIndex = true)
-                    }
-                    H5(text = "Albums", modifier = Modifier.padding(start = 10.dp))
-                    AlbumListHorizontal(albums = albums)
-                    H5(text = "Similar Artists", modifier = Modifier.padding(start = 10.dp))
+                    TopTracks(artistModel = artistModel, playerModel = playerModel)
+                    AlbumListHorizontal(albums = albums, title="Album")
+                    Divider(modifier = Modifier.padding(vertical = 10.dp))
                     ArtistListHorizontal(
                         appModel = appModel,
                         playerModel = playerModel,
                         artistModel = artistModel,
                         artists = contributors,
+                        title="Similar Artists"
                     )
-                    H5(text = "More Tracks", modifier = Modifier.padding(start = 10.dp))
-                    Column {
-                        TrackList(tracks = artistModel.moreTracks, playerModel = playerModel, subtitle = { track ->
-                            "Rank ${formatNumber(track.rank)}"
-                        })
-                    }
+                    Divider(modifier = Modifier.padding(vertical = 10.dp))
+//                    H5(text = "Similar Artists", modifier = Modifier.padding(start = 10.dp))
+//                    ArtistListHorizontal(
+//                        appModel = appModel,
+//                        playerModel = playerModel,
+//                        artistModel = artistModel,
+//                        artists = contributors,
+//                    )
+                    H5(text = "More Tracks", modifier = Modifier.padding(start = 10.dp, bottom = 10.dp))
+//                        Column {
+//                            ScrollableTrackList(tracks = artistModel.moreTracks, playerModel = playerModel, subtitle = { track ->
+//                                "Rank ${formatNumber(track.rank)}"
+//                            })
+//                        }
                 }
+
+            }
+        }
+    }
+}
+
+@Composable
+private fun TopTracks(artistModel: ArtistModel, playerModel: PlayerModel) {
+    artistModel.apply {
+        Column {
+            H5(text = "Top Tracks", modifier = Modifier.padding(start = 10.dp, bottom = 10.dp))
+            artistModel.top5Tracks.forEachIndexed { index, track ->
+                TrackListItem(track = track, trackList = top5Tracks, index = index, playerModel = playerModel, subtitle = { t ->
+                    "Rank ${formatNumber(t.rank)}"
+                }, showIndex = true)
             }
         }
     }

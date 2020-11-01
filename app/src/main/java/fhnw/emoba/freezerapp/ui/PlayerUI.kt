@@ -45,12 +45,12 @@ fun PlayerBar(appModel: AppModel, playerModel: PlayerModel) {
                 modifier = Modifier.fillMaxWidth().padding(10.dp,0.dp,20.dp,0.dp).align(Alignment.CenterVertically)
             ) {
                 Column(Modifier.align(Alignment.CenterVertically)) {
-                    Text(
+                    SingleLineText(
                         currentTrack.title,
                         style = MaterialTheme.typography.subtitle1,
                         color = textColor
                     )
-                    Text(
+                    SingleLineText(
                         currentTrack.artist.name,
                         style = MaterialTheme.typography.subtitle2,
                         color = textColor.copy(alpha = 0.7f)
@@ -73,7 +73,7 @@ fun PlayerBar(appModel: AppModel, playerModel: PlayerModel) {
 @Composable
 private fun DefaultTopBar(appModel: AppModel, playerModel: PlayerModel) {
     TopAppBar(
-        title = { Text(playerModel.currentTrack.title) },
+        title = { SingleLineText(playerModel.currentTrack.title) },
         navigationIcon = {
             IconButton(onClick = {
                 appModel.isPlayerOpen = false
