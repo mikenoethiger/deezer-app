@@ -1,7 +1,5 @@
 package fhnw.emoba.freezerapp.data
 
-import androidx.compose.ui.graphics.ImageAsset
-
 interface DeezerService {
 
     /**
@@ -22,33 +20,28 @@ interface DeezerService {
         order: SearchOrder = SearchOrder.RANKING
     ): List<Track>
 
-    /**
-     * Load top tracks of the artist.
-     * @param limit number of tracks to load
-     * @param index start index of top tracks, 0 means load `limit` tracks beginning from the first top track
-     */
-    fun loadTopTracks(artist: Track.Artist, limit: Int = 10, index: Int = 0): List<Track>
+    fun loadTracks(obj: HasTrackList): List<Track>
+    fun loadTracks(obj: HasTrackList, limit: Int, index: Int = 0): List<Track>
+    fun loadTrack(trackID: Int): Track
 
-    fun loadArtist(artistId: Int): Track.Artist
+    fun loadArtist(artistId: Int): Artist
 
-    fun loadAlbumCoversAsync(tracks: List<Track>)
-    fun loadAlbumCoversAsync2(albums: List<Track.Album>)
-    fun loadArtistCoversAsync(tracks: List<Track>)
+    fun loadAlbum(albumId: Int): Album
+
+    fun loadRadios(): List<Radio>
+
+    fun lazyLoadImages(obj: HasImage)
 
     /**
      * Extract unique albums from a list of tracks
      */
-    fun uniqueAlbums(tracks: List<Track>): Set<Track.Album>
+    fun uniqueAlbums(tracks: List<Track>): Set<Album>
 
     /**
      * Extract unique artists from a search result
      */
-    fun uniqueArtists(tracks: List<Track>): Set<Track.Artist>
-    fun uniqueContributors(tracks: List<Track>): Set<Track.Artist>
-
-    fun getAlbumCover(albumId: Int, size: ImageSize = ImageSize.x400): ImageAsset
-
-    fun getArtistCover(artistId: Int, size: ImageSize = ImageSize.x400): ImageAsset
+    fun uniqueArtists(tracks: List<Track>): Set<Artist>
+    fun uniqueContributors(tracks: List<Track>): Set<Artist>
 }
 
 enum class SearchOrder {

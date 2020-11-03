@@ -1,20 +1,40 @@
 package fhnw.emoba.freezerapp.data
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import org.json.JSONObject
 
-class Artist(artistJSONObject: JSONObject) {
-    // Artist API docs: https://developers.deezer.com/api/artist
-    val id            = artistJSONObject.getInt("id") // The artist's Deezer id
-    val name          = artistJSONObject.getString("name") // The artist's name
-    val link          = artistJSONObject.getString("link") // The url of the artist on Deezer
-    val share         = artistJSONObject.getString("share") // The share link of the artist on Deezer
-    val picture       = artistJSONObject.getString("picture") // The url of the artist picture. Add 'size' parameter to the url to change size. Can be 'small', 'medium', 'big', 'xl'
-    val pictureSmall  = artistJSONObject.getString("picture_small") // The url of the artist picture in size small.
-    val pictureMedium = artistJSONObject.getString("picture_medium") // The url of the artist picture in size medium.
-    val pictureBig    = artistJSONObject.getString("picture_big") // The url of the artist picture in size big.
-    val pictureXL     = artistJSONObject.getString("picture_xl") // The url of the artist picture in size xl.
-    val nbAlbum       = artistJSONObject.getInt("nb_album") // The number of artist's albums
-    val nbFan         = artistJSONObject.getInt("nb_fan") // The number of artist's fans
-    val radio         = artistJSONObject.getBoolean("radio") // true if the artist has a smartradio
-    val tracklist     = artistJSONObject.getString("tracklist") // API Link to the top of this artist
+class Artist(albumObject: JSONObject): HasImage(), HasTrackList {
+    val id = albumObject.getInt("id")
+    val name = albumObject.getString("name")
+    val link = if (albumObject.has("link")) albumObject.getString("link") else ""
+    val pictureLink = if (albumObject.has("picture")) albumObject.getString("picture") else ""
+    // depending on the artist object, nbFan may be present or not. we make it a mutable state variable to give the service the chance to load nbFans at a later point
+    val nbFan = if (albumObject.has("nb_fan")) albumObject.getInt("nb_fan") else 0
+    private val trackListUrl = albumObject.getString("tracklist")
+
+    override fun getTrackListUrl(): String = trackListUrl.split("?")[0]
+
+    constructor(jsonString: String): this(JSONObject(jsonString))
+
+    override fun getImageUrl(): String = pictureLink
+
+    /**
+     * Get trackList link for top `n` tracks
+     * @param limit number of tracks to load
+     * @param index offset, i.e. load `limit` tracks starting at `index`
+     */
+    fun getTrackListLink(limit: Int, index: Int): String {
+        val baseUrl = trackListUrl.split("?")[0]
+        return "$baseUrl?limit=$limit&index=$index"
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (other == null || other !is Artist) return false
+        return other.id == id
+    }
+    override fun hashCode(): Int  = id
 }
+
+val NULL_ARTIST = Artist("{\"id\":-1,\"name\":\"\",\"link\":\"\",\"share\":\"\",\"picture\":\"\",\"nb_album\":0,\"nb_fan\":0,\"radio\":false,\"tracklist\":\"\",\"type\":\"\"}")

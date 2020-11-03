@@ -1,11 +1,13 @@
 package fhnw.emoba.freezerapp.ui.screen
 
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.asDisposableClock
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.animation.defaultFlingConfig
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.ExperimentalLazyDsl
-import androidx.compose.material.Divider
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Scaffold
 import androidx.compose.runtime.Composable
@@ -13,23 +15,32 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.VerticalGradient
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.AnimationClockAmbient
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import fhnw.emoba.freezerapp.data.Artist
 import fhnw.emoba.freezerapp.data.formatNumber
-import fhnw.emoba.freezerapp.model.AppModel
-import fhnw.emoba.freezerapp.model.ArtistModel
-import fhnw.emoba.freezerapp.model.PlayerModel
+import fhnw.emoba.freezerapp.model.ModelContainer
 import fhnw.emoba.freezerapp.ui.*
+import fhnw.emoba.freezerapp.ui.theme.PADDING_MEDIUM
+import fhnw.emoba.freezerapp.ui.theme.PADDING_SMALL
 
 @ExperimentalLazyDsl
 @Composable
 @ExperimentalAnimationApi
-fun ArtistScreen(appModel: AppModel, artistModel: ArtistModel, playerModel: PlayerModel) {
-    appModel.apply {
+fun ArtistScreen(model: ModelContainer) {
+    model.apply {
+        // create a new LazyListState to reset scroll position for the LazyTrackList whenever the artist screen is recomposed
+        // otherwise we stay at the same scroll position, when for example navigating from one artist to another
+        val lazyListState = LazyListState(0, 0, defaultFlingConfig(), AnimationClockAmbient.current.asDisposableClock())
         Scaffold(
-            topBar = { BackBar(text = artistModel.getArtist().name, onBack = { closeNestedScreen() }) },
-            bottomBar = { MenuWithPlayBar(appModel, playerModel) },
-            bodyContent = { ArtistBody(appModel = appModel, artistModel = artistModel, playerModel = playerModel) },
+            topBar = { PreviousScreenBar(text = artistModel.getArtist().name,
+                onBack = {
+                    model.artistModel.setPreviousArtist()
+                    appModel.closeNestedScreen()
+                }, model=appModel) },
+            bottomBar = { MenuWithPlayBar(model=model) },
+            bodyContent = { ArtistBody(model=model, lazyListState = lazyListState) },
         )
     }
 }
@@ -37,65 +48,77 @@ fun ArtistScreen(appModel: AppModel, artistModel: ArtistModel, playerModel: Play
 @ExperimentalLazyDsl
 @ExperimentalAnimationApi
 @Composable
-private fun ArtistBody(appModel: AppModel, artistModel: ArtistModel, playerModel: PlayerModel) {
-    artistModel.apply {
+private fun ArtistBody(model: ModelContainer, lazyListState: LazyListState) {
+    model.artistModel.apply {
         val artist = getArtist()
         Box {
-            Image(asset = artist.pictureX400, modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp), contentScale = ContentScale.FillWidth)
-            LazyTrackList(tracks = artistModel.moreTracks, playerModel = playerModel) {
-                Box(modifier = Modifier.padding(top = 200.dp)){}
-                Column(modifier = Modifier
-                    .background(VerticalGradient(listOf(Color.Transparent, MaterialTheme.colors.background), 0f, 350f))
-                    .padding(top = 50.dp)
-                    .fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Column {
-                        H4(text = artist.name, overflow = TextOverflow.Ellipsis, maxLines = 1, modifier = Modifier.padding(start = 10.dp))
-                        val fans = formatNumber(artist.nbFan)
-                        Subtitle1(text = "$fans fans", modifier = Modifier.padding(start = 10.dp))
-                    }
-                    Divider(modifier = Modifier.padding(vertical = 10.dp))
-                    TopTracks(artistModel = artistModel, playerModel = playerModel)
-                    AlbumListHorizontal(albums = albums, title="Album")
-                    Divider(modifier = Modifier.padding(vertical = 10.dp))
-                    ArtistListHorizontal(
-                        appModel = appModel,
-                        playerModel = playerModel,
-                        artistModel = artistModel,
-                        artists = contributors,
-                        title="Similar Artists"
-                    )
-                    Divider(modifier = Modifier.padding(vertical = 10.dp))
-//                    H5(text = "Similar Artists", modifier = Modifier.padding(start = 10.dp))
-//                    ArtistListHorizontal(
-//                        appModel = appModel,
-//                        playerModel = playerModel,
-//                        artistModel = artistModel,
-//                        artists = contributors,
-//                    )
-                    H5(text = "More Tracks", modifier = Modifier.padding(start = 10.dp, bottom = 10.dp))
-//                        Column {
-//                            ScrollableTrackList(tracks = artistModel.moreTracks, playerModel = playerModel, subtitle = { track ->
-//                                "Rank ${formatNumber(track.rank)}"
-//                            })
-//                        }
-                }
-
+            // background image (content will be above it)
+            Image(asset = artist.imageX400, modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp), contentScale = ContentScale.FillWidth)
+            LazyTrackList(
+                tracks = getMoreTracks(),
+                trackListName = artist.name,
+                title = null,
+                playerModel = model.playerModel,
+                lazyListState = lazyListState) {
+                // make some space to show the background image when not scrolled down
+                Box(modifier = Modifier.padding(top = 250.dp)){}
+                Header(model)
             }
         }
     }
 }
 
+@ExperimentalLazyDsl
+@ExperimentalAnimationApi
 @Composable
-private fun TopTracks(artistModel: ArtistModel, playerModel: PlayerModel) {
-    artistModel.apply {
+private fun Header(model: ModelContainer) {
+    model.artistModel.apply {
+        val artist = getArtist()
+        Column(modifier = Modifier
+            .background(VerticalGradient(listOf(Color.Transparent, MaterialTheme.colors.background), 0f, 300f))
+            .padding(top = PADDING_MEDIUM)
+            .fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(PADDING_MEDIUM)
+        ) {
+            InterpretTitle(artist)
+            TopTracks(model = model)
+            AlbumListHorizontal(model=model, albums = albums, currentScreenName = artist.name)
+            DividerThin()
+            ArtistListHorizontal(
+                model = model,
+                artists = contributors,
+                title="Similar Artists",
+                currentScreenName = artist.name
+            )
+            DividerThin()
+            H5("More Tracks", modifier = Modifier.padding(start= PADDING_SMALL, bottom = PADDING_SMALL))
+        }
+    }
+}
+
+@Composable
+private fun InterpretTitle(artist: Artist) {
+    Column {
+        H4(text = artist.name, overflow = TextOverflow.Ellipsis, maxLines = 1, modifier = Modifier.padding(start = PADDING_SMALL))
+        val fans = formatNumber(artist.nbFan)
+        Subtitle1(text = "$fans fans", modifier = Modifier.padding(start = 10.dp))
+    }
+}
+
+@Composable
+private fun TopTracks(model: ModelContainer) {
+    model.artistModel.apply {
         Column {
-            H5(text = "Top Tracks", modifier = Modifier.padding(start = 10.dp, bottom = 10.dp))
-            artistModel.top5Tracks.forEachIndexed { index, track ->
-                TrackListItem(track = track, trackList = top5Tracks, index = index, playerModel = playerModel, subtitle = { t ->
-                    "Rank ${formatNumber(t.rank)}"
-                }, showIndex = true)
+            val topTracks = getTopTracks()
+            topTracks.forEachIndexed { index, track ->
+                TrackListItem(
+                    track = track,
+                    trackList = trackList,
+                    trackListName = getArtist().name,
+                    index = index,
+                    playerModel = model.playerModel,
+                    subtitle = { t -> "Rank ${formatNumber(t.rank)}" },
+                    showIndex = true)
             }
         }
     }

@@ -11,10 +11,11 @@ import javax.net.ssl.HttpsURLConnection
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.os.Debug
 import android.util.Log
 import androidx.compose.ui.graphics.ImageAsset
 import androidx.compose.ui.graphics.asImageAsset
+import java.lang.IllegalArgumentException
+import java.lang.UnsupportedOperationException
 import java.net.URLEncoder
 import java.text.NumberFormat
 
@@ -79,12 +80,32 @@ enum class ImageSize(val size: Int, val identifier: String, val defaultImage: Im
     x1000(1000, "xl")
 }
 
-fun formatDuration(seconds: Int): String {
-    val hours = seconds/60/60
-    val mins = (seconds - hours*60*60)/60
-    val secs = (seconds - hours*60*60 - mins*60)
-    if (hours != 0) return hours.toString() + ":" + String.format("%02d", mins) + ":" + String.format("%02d", secs)
-    return mins.toString() + ":" + String.format("%02d", secs)
+enum class DurationFormat {
+    CLOCK,
+    READABLE
 }
 
-fun formatNumber(n: Int) = NumberFormat.getIntegerInstance().format(n)
+/**
+ * Format duration given in seconds
+ * @param format 0=clock format (12:15:11), 1=readable format (12 hr. 15 min. 11 sec.)
+ */
+fun formatDuration(seconds: Int, format: DurationFormat = DurationFormat.CLOCK): String {
+    val hr = seconds/60/60
+    val min = (seconds - hr*60*60)/60
+    val sec = (seconds - hr*60*60 - min*60)
+    when (format) {
+        DurationFormat.CLOCK -> {
+            if (hr != 0) return hr.toString() + ":" + String.format("%02d", min) + ":" + String.format("%02d", sec)
+            return min.toString() + ":" + String.format("%02d", sec)
+        }
+        DurationFormat.READABLE -> {
+            var duration = "$seconds sec."
+            if (min != 0) duration = "$min min. $duration"
+            if (hr != 0) duration = "$hr hr. $duration"
+            return duration
+        }
+        else -> throw UnsupportedOperationException("format $format not yet implemented")
+    }
+}
+
+fun formatNumber(n: Int): String = NumberFormat.getIntegerInstance().format(n)

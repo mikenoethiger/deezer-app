@@ -7,49 +7,63 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.ComposeCompilerApi
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageAsset
+import androidx.compose.ui.graphics.vector.VectorAsset
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.FailedResource
 import androidx.compose.ui.res.LoadedResource
 import androidx.compose.ui.res.PendingResource
 import androidx.compose.ui.res.loadImageResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import fhnw.emoba.R
+import fhnw.emoba.freezerapp.data.Album
+import fhnw.emoba.freezerapp.data.Artist
 import fhnw.emoba.freezerapp.data.NULL_TRACK
 import fhnw.emoba.freezerapp.data.Track
-import fhnw.emoba.freezerapp.model.AppModel
-import fhnw.emoba.freezerapp.model.ArtistModel
-import fhnw.emoba.freezerapp.model.MainMenu
-import fhnw.emoba.freezerapp.model.PlayerModel
+import fhnw.emoba.freezerapp.model.*
+import fhnw.emoba.freezerapp.ui.screen.AlbumScreen
 import fhnw.emoba.freezerapp.ui.screen.ArtistScreen
+import fhnw.emoba.freezerapp.ui.screen.PlayerBar
 import fhnw.emoba.freezerapp.ui.theme.*
-import org.w3c.dom.Text
 
 // App components
 
+@Composable
+fun PreviousScreenBar(text: String, onBack: () -> Unit, model: AppModel) {
+    val previousScreenName = model.getCurrentNestedScreen {}.previousScreenName
+    TopAppBar(
+        title = {
+            SingleLineText(
+                previousScreenName, textAlign = TextAlign.Center, modifier = Modifier.clickable(
+                    onClick = onBack
+                )
+            )
+        },
+        navigationIcon = {
+            IconButton(onClick = onBack) { Icon(Icons.Filled.KeyboardArrowLeft) }
+        })
+}
+
 @ExperimentalAnimationApi
 @Composable
-fun MenuWithPlayBar(appModel: AppModel, playerModel: PlayerModel) {
-    Column {
-        SlideUpVertically(visible = PlayerModel.currentTrack != NULL_TRACK) {
-            PlayerBar(
-                appModel,
-                playerModel
-            )
+fun MenuWithPlayBar(model: ModelContainer) {
+    model.playerModel.apply {
+        Column {
+            SlideUpVertically(visible = track() != NULL_TRACK) {
+                PlayerBar(model)
+            }
+            Divider(color = MaterialTheme.colors.primaryVariant, thickness = 2.dp)
+            MenuBar(model.appModel)
         }
-        Divider(color = MaterialTheme.colors.primaryVariant, thickness = 2.dp)
-        MenuBar(appModel)
     }
 }
 
@@ -72,36 +86,46 @@ fun MenuBar(model: AppModel) {
 }
 
 @Composable
-fun BackBar(text: String, onBack: () -> Unit) {
-    TopAppBar(
-        title = { Text(text, overflow = TextOverflow.Ellipsis, maxLines = 1) },
-        navigationIcon = {
-            IconButton(onClick = onBack) {
-                Icon(Icons.Filled.KeyboardArrowLeft)
-            }
-        })
+fun DefaultTopBar(title: String, icon: VectorAsset, onIconClick: () -> Unit = {}) {
+    TopAppBar(title = {
+        Row(horizontalArrangement = Arrangement.spacedBy(PADDING_SMALL), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onIconClick) { Icon (icon) }
+            Text(title)
+        }
+    })
 }
 
 /**
  * @param title to show above the horizontal list or null if no title to be displayed
  */
+@ExperimentalAnimationApi
+@ExperimentalLazyDsl
 @Composable
 fun AlbumListHorizontal(
-    albums: List<Track.Album>,
+    model: ModelContainer,
+    albums: List<Album>,
+    currentScreenName: String,
     title: String? = "Albums",
     modifier: Modifier = Modifier) {
     Column(
         modifier = Modifier.padding(start = PADDING_SMALL).then(modifier),
         verticalArrangement = Arrangement.spacedBy(PADDING_SMALL)
     ) {
-        if (title != null) H5(text = title)
-        HorizontalItemList(
-            albums,
-            onClick = {},
-            { it.title },
-            { it.coverX400 },
-            IMAGE_MIDDLE
-        )
+        model.apply {
+            if (title != null) H5(text = title)
+            HorizontalItemList(
+                albums,
+                onClick = { album ->
+                    albumModel.loadAlbum(album.id)
+                    appModel.openNestedScreen(currentScreenName) {
+                        AlbumScreen(model=model)
+                    }
+                },
+                { it.title },
+                { it.imageX400 },
+                IMAGE_MEDIUM
+            )
+        }
     }
 }
 
@@ -112,14 +136,13 @@ fun AlbumListHorizontal(
 @ExperimentalAnimationApi
 @Composable
 fun ArtistListHorizontal(
-    appModel: AppModel,
-    playerModel: PlayerModel,
-    artistModel: ArtistModel,
-    artists: List<Track.Artist>,
+    model: ModelContainer,
+    artists: List<Artist>,
+    currentScreenName: String,
     modifier: Modifier = Modifier,
     title: String? = "Artists"
 ) {
-    appModel.apply {
+    model.apply {
         Column(
             modifier = Modifier.padding(start = PADDING_SMALL).then(modifier),
             verticalArrangement = Arrangement.spacedBy(PADDING_SMALL)
@@ -129,17 +152,13 @@ fun ArtistListHorizontal(
                 artists,
                 onClick = { artist ->
                     artistModel.setArtist(artist)
-                    openNestedScreen {
-                        ArtistScreen(
-                            appModel = appModel,
-                            artistModel = artistModel,
-                            playerModel = playerModel
-                        )
+                    appModel.openNestedScreen(currentScreenName) {
+                        ArtistScreen(model = model)
                     }
                 },
                 { it.name },
-                { it.pictureX400 },
-                IMAGE_MIDDLE
+                { it.imageX400 },
+                IMAGE_MEDIUM
             )
         }
     }
@@ -151,7 +170,7 @@ private fun <T> HorizontalItemList(
     onClick: (T) -> Unit,
     text: (T) -> String,
     image: (T) -> ImageAsset,
-    imageSize: Dp = IMAGE_MIDDLE,
+    imageSize: Dp = IMAGE_MEDIUM,
     modifier: Modifier = Modifier
 ) {
     LazyRowFor(items = items, modifier = modifier) { item ->
@@ -172,7 +191,7 @@ private fun <T> HorizontalItemList(
 }
 
 /**
- * @param tracksShowIndex whether the tracks in the list should be numbered
+ * @param showTrackIndex whether the tracks in the list should be numbered
  * @param firstItem composable which will be rendered as first item in the scrollable list.
  *                  Addresses the case, when you want to scroll the whole page and not just
  *                  where the track list begins (which may be way down at the bottom of the screen)
@@ -182,19 +201,34 @@ private fun <T> HorizontalItemList(
 fun LazyTrackList(
     playerModel: PlayerModel,
     tracks: List<Track>,
-    trackListTitle: String? = null,
+    trackListName: String,
+    title: String? = null,
     tracksSubtitle: (Track) -> String = { it.artist.name },
-    tracksShowIndex: Boolean = false,
+    showTrackIndex: Boolean = false,
+    showImages: Boolean = true,
     modifier: Modifier = Modifier,
+    lazyListState: LazyListState = rememberLazyListState(), // provide your own list state if you want to control e.g. scroll position
     firstItem: @Composable (() -> Unit)? = null
 ) {
-    LazyColumn(modifier=modifier) {
+    LazyColumn(
+        modifier = modifier,
+        state=lazyListState,
+        contentPadding = PaddingValues(bottom=70.dp) // padding otherwise the list is hidden by the menu bar
+    ) {
         if (firstItem != null) {
             item { firstItem() }
         }
-        if (trackListTitle != null) item { H5(trackListTitle, modifier = Modifier.padding(start= PADDING_SMALL, bottom = PADDING_SMALL)) }
+        if (title != null) item {
+            H5(title, modifier = Modifier
+                .padding(start= PADDING_SMALL, bottom = PADDING_SMALL))
+        }
         itemsIndexed(tracks) { index, track ->
-            TrackListItem(track = track, trackList=tracks, index=index, playerModel = playerModel)
+            TrackListItem(playerModel = playerModel,
+                track = track, trackList=tracks, trackListName = trackListName,
+                index=index, subtitle = tracksSubtitle,
+                showIndex = showTrackIndex,
+                showImage = showImages
+            )
         }
     }
 }
@@ -203,31 +237,54 @@ fun LazyTrackList(
 fun TrackListItem(
     track: Track,
     trackList: List<Track>,
+    trackListName: String,
     index: Int,
     subtitle: (Track) -> String = { it.artist.name },
     showIndex: Boolean = false,
+    showImage: Boolean = true,
     playerModel: PlayerModel
 ) {
+
+    val icon: (@Composable () -> Unit)? = if (!showImage && !showIndex) null else {{
+        TrackListItemIcon(track = track, index = index, showImage = showImage, showIndex = showIndex)
+    }}
+
     ListItem(
         text = { SingleLineText(track.title) },
         secondaryText = { SingleLineText(subtitle(track)) },
-        icon = {
-            Row {
-                if (showIndex) Text(
-                    text = "${index + 1}",
-                    modifier = Modifier.align(Alignment.CenterVertically).padding(end = 15.dp)
-                )
-                Image(asset = track.album.coverX120)
-            }
-        },
+        icon = icon,
         trailing = { IconButton(onClick = {}) { Icon(Icons.Filled.MoreVert) } },
         modifier = Modifier.background(MaterialTheme.colors.background).clickable(onClick = {
-            playerModel.trackList = trackList
-            playerModel.loadTrack(track)
+            playerModel.setTrack(track, trackList, trackListName)
             playerModel.play()
         })
     )
     Divider(modifier = Modifier.background(MaterialTheme.colors.background))
+}
+
+@Composable
+fun TrackListItemIcon(track: Track, index: Int, showIndex: Boolean = true, showImage: Boolean = true) {
+    Row {
+        if (showIndex) Text(
+            text = "${index + 1}",
+            modifier = Modifier.align(Alignment.CenterVertically).padding(end = 15.dp)
+        )
+        if (showImage) Image(asset = track.album.imageX120)
+    }
+}
+
+@Composable
+fun LikeButton(appModel: AppModel, track: Track, modifier: Modifier = Modifier) {
+    appModel.apply {
+        val isLiked = isFavorite(track.id)
+        IconButton(onClick = {
+            if (isLiked) appModel.unlikeTrack(track)
+            else appModel.likeTrack(track)
+        }, modifier=modifier) {
+            val icon = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder
+            Icon(icon, tint=MaterialTheme.colors.onPrimary)
+        }
+    }
 }
 
 // Pure components (i.e. model independent)
@@ -240,12 +297,13 @@ fun DividerMedium(modifier: Modifier = Modifier) = Divider(thickness = THICKNESS
 fun DividerFat(modifier: Modifier = Modifier) = Divider(thickness = THICKNESS_FAT, modifier = Modifier.padding(vertical = PADDING_MEDIUM).then(modifier))
 
 @Composable
-fun LoadingBox(message: String) {
+fun LoadingBox(message: String, modifier: Modifier = Modifier) {
     Column(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxSize().then(modifier)
     ) {
+        // androidx.compose.foundation.layout.Box(modifier = Modifier.width(IMAGE_MEDIUM)){ DeezerLogo() }
         Text(message, style = MaterialTheme.typography.h5)
         CircularProgressIndicator(modifier = Modifier.padding(10.dp))
     }
@@ -257,8 +315,9 @@ fun SingleLineText(
     overflow: TextOverflow = TextOverflow.Ellipsis,
     style: TextStyle = AmbientTextStyle.current,
     color: Color = Color.Unspecified,
+    textAlign: TextAlign? = null,
     modifier: Modifier = Modifier) {
-    Text(title, overflow = overflow, maxLines = 1, style=style, color=color, modifier = modifier)
+    Text(title, overflow = overflow, maxLines = 1, style=style, color=color, textAlign=textAlign, modifier = modifier)
 }
 
 @Composable
@@ -288,10 +347,10 @@ fun Drawer() {
 }
 
 @Composable
-fun CenteredDeezerLogo() {
+fun CenteredDeezerLogo(modifier: Modifier = Modifier) {
     Column(
         verticalArrangement = Arrangement.Center,
-        modifier = Modifier.padding(30.dp).fillMaxHeight()
+        modifier = Modifier.padding(30.dp).fillMaxHeight().then(modifier)
     ) { DeezerLogo() }
 
 }
@@ -309,18 +368,10 @@ private fun ImageLoadInBackground(@DrawableRes resId: Int) {
     when (resource) {
         is LoadedResource -> {
             val imageAsset = resource.resource!!
-            Image(
-                asset = imageAsset,
-                contentScale = ContentScale.FillWidth,
-                modifier = Modifier.preferredHeight(200.dp),
-                alignment = Alignment.TopCenter
-            )
+            Image(asset = imageAsset)
         }
         is FailedResource -> {
-            Box(
-                modifier = Modifier.fillMaxWidth().preferredHeight(200.dp),
-                alignment = Alignment.Center
-            ) {
+            Box(alignment = Alignment.Center) {
                 Text("failed", style = MaterialTheme.typography.h6, color = Color.Red)
             }
         }

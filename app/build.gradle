@@ -60,6 +60,9 @@ dependencies {
 //    implementation "androidx.compose.foundation:foundation:$compose_version"
 //    implementation "androidx.compose.animation:animation:$compose_version"
 
+    // data store to store favorite songs: https://developer.android.com/topic/libraries/architecture/datastore
+    implementation "androidx.datastore:datastore-preferences:1.0.0-alpha02"
+
     // Required for instrumented tests
     androidTestImplementation "androidx.ui:ui-test:$compose_version"
 

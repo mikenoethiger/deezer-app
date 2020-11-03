@@ -1,15 +1,17 @@
 package fhnw.emoba.freezerapp.data.impl
 
-import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.Test
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Test
+import org.junit.runner.RunWith
 
+@RunWith(AndroidJUnit4::class)
 class RemoteDeezerServiceTest {
     @Test
     fun testSearch() {
         // when
         val searchResults = RemoteDeezerService.search("Eminem")
         // then
-        assertTrue(searchResults.isNotEmpty())
+        assert(searchResults.isNotEmpty())
     }
 
     @Test
@@ -22,7 +24,7 @@ class RemoteDeezerServiceTest {
         // when
         val searchResults = RemoteDeezerService.extendedSearch(searchParameters)
         // then
-        assertTrue(searchResults.isNotEmpty())
+        assert(searchResults.isNotEmpty())
     }
 
     @Test
@@ -34,7 +36,7 @@ class RemoteDeezerServiceTest {
         // then
         val albumCount = mutableMapOf<Int, Int>()
         albums.forEach{ albumCount.compute(it.id) { _, count -> count?.plus(1) ?: 1} }
-        albumCount.forEach{ assertEquals(1, it.value) }
+        albumCount.forEach{ assert(1 == it.value) }
     }
 
     @Test
@@ -46,6 +48,44 @@ class RemoteDeezerServiceTest {
         // then
         val artistCount = mutableMapOf<Int, Int>()
         artists.forEach{ artistCount.compute(it.id) { _, count -> count?.plus(1) ?: 1} }
-        artistCount.forEach{ assertEquals(1, it.value) }
+        artistCount.forEach{ assert(1 == it.value) }
+    }
+
+    @Test
+    fun testLoadAlbum() {
+        // given
+        val albumId = 302127
+        // when
+        val album = RemoteDeezerService.loadAlbum(albumId)
+        // then
+        assert("Discovery" == album.title)
+    }
+
+    @Test
+    fun testLoadArtist() {
+        // given
+        val artistId = 27
+        // when
+        val artist = RemoteDeezerService.loadArtist(artistId)
+        // then
+        assert("Daft Punk" == artist.name)
+    }
+
+    @Test
+    fun testLoadTrack() {
+        // given
+        val trackID = 3135556
+        // when
+        val track = RemoteDeezerService.loadTrack(trackID)
+        // then
+        assert("Harder, Better, Faster, Stronger" == track.title)
+    }
+
+    @Test
+    fun loadRadios() {
+        // when
+        val radios = RemoteDeezerService.loadRadios()
+        // then
+        assert(radios.isNotEmpty())
     }
 }
