@@ -30,8 +30,9 @@ object FreezerApp : EmobaApp {
     @Composable
     override fun createAppUI() {
         val storageService = LocalStorageService(dataStore)
-        // uncomment to reset favorite tracks
+        // uncomment to reset favorite tracks / search history
         // GlobalScope.launch { storageService.writeFavoriteTracks(emptyList()) }
+//         GlobalScope.launch { storageService.writeSearchHistory(emptyList()) }
         val deezerService = RemoteDeezerService
         val playerModel = PlayerModel
         val appModel = AppModel(deezerService, storageService)

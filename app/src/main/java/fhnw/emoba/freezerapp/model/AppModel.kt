@@ -18,11 +18,6 @@ class AppModel(private val deezerService: DeezerService, private val storageServ
 
     var isLoading by mutableStateOf(false)
 
-    var songsSearchText by mutableStateOf("")
-    var searchTrackList: List<Track> by mutableStateOf(emptyList())
-    var searchArtists: List<Artist> by mutableStateOf(emptyList())
-    var searchAlbums: List<Album> by mutableStateOf(emptyList())
-
     var favoriteTracksLoading by mutableStateOf(false)
     var favoriteTracks: List<Track> by mutableStateOf(emptyList())
 
@@ -31,7 +26,10 @@ class AppModel(private val deezerService: DeezerService, private val storageServ
     var currentRadio by mutableStateOf(NULL_RADIO)
     var currentRadioLoading by mutableStateOf(false)
     var currentRadioTracks: List<Track> by mutableStateOf(emptyList())
-    init { loadFavoriteTracksFromLocalStorage() }
+    init {
+        loadSearchHistoryFromLocalStorage()
+        loadFavoriteTracksFromLocalStorage()
+    }
 
     // track to be shown in the track options screen
     private var currentOptionsTrack by mutableStateOf(NULL_TRACK)
@@ -76,12 +74,9 @@ class AppModel(private val deezerService: DeezerService, private val storageServ
             val trackIdFlow = storageService.readFavoriteTracks()
             trackIdFlow.collect { trackIDs ->
                 waitUntilMutableStateReadable()
-                Log.d("favorite", "loaded ${trackIDs.size} track IDs from storage")
                 favoriteTracks = trackIDs.map { id ->
-                    Log.d("favorite", "loading track $id")
                     deezerService.loadTrack(id)
                 }
-                Log.d("favorite", "loaded ${favoriteTracks.size} favorite tracks")
                 favoriteTracksLoading = false
                 // load album images
                 favoriteTracks.forEach{ track ->
@@ -128,32 +123,84 @@ class AppModel(private val deezerService: DeezerService, private val storageServ
         val currentScreenStack = nestedScreens.getOrDefault(currentMenu, emptyList())
         nestedScreens = nestedScreens.plus(Pair(currentMenu, currentScreenStack.dropLast(1)))
     }
-
     /**
      * Open a nested screen in the currentMenu
-     * @param previousScreenName name of the previous screen, can be used e.g. to display a back button labelled with the previous screen name
-     *                           if null is passed, previousScreenName will be taken from the preceding screen, if there is no preceding screen an empty string will be taken
+     * @param title screen title
      */
-    fun openNestedScreen(previousScreenName: String?, ui: @Composable () -> Unit) {
+    fun openNestedScreen(title: String, ui: @Composable () -> Unit) {
         val currentScreenStack = nestedScreens.getOrDefault(currentMenu, emptyList())
-        val prevScreenName = previousScreenName
-            ?: if (currentScreenStack.isNotEmpty()) currentScreenStack.last().previousScreenName else currentMenu.title
-        val screen = Screen(ui, true, prevScreenName)
+        val screen = Screen(ui, true, title)
         nestedScreens = nestedScreens.plus(Pair(currentMenu, currentScreenStack.plus(screen)))
     }
+    fun getPreviousScreenName(): String {
+        val currentScreenStack = nestedScreens.getOrDefault(currentMenu, emptyList())
+        return if (currentScreenStack.size < 2) currentMenu.title else currentScreenStack[currentScreenStack.lastIndex-1].screenName
+    }
 
-    fun searchSongs() {
-        if (songsSearchText.length < 2) return
+    var isSearchFocused by mutableStateOf(false)
+    private var searchText by mutableStateOf("")
+    private var searchHistory: List<String> by mutableStateOf(emptyList())
+    var searchTrackList: List<Track> by mutableStateOf(emptyList())
+    var searchArtists: List<Artist> by mutableStateOf(emptyList())
+    var searchAlbums: List<Album> by mutableStateOf(emptyList())
+
+    fun searchText() = searchText
+    fun searchText(value: String) {
+        searchText = value
+        if (searchText.isBlank()) clearSearchResult()
+    }
+    fun searchHistory() = searchHistory
+    fun focusSearch() {
+        isSearchFocused = true
+    }
+    fun clearSearchResult() {
+        searchText = ""
+        searchTrackList = emptyList()
+        searchArtists = emptyList()
+        searchAlbums = emptyList()
+    }
+
+    fun search() {
+        if (searchText.length < 2) return
         isLoading = true
+        // add term to search history
+        addToSearchHistory(searchText)
         searchTrackList = emptyList()
         modelScope.launch {
-            searchTrackList = deezerService.search(songsSearchText)
+            searchTrackList = deezerService.search(searchText)
             searchArtists = deezerService.uniqueArtists(searchTrackList).toList()
             searchAlbums = deezerService.uniqueAlbums(searchTrackList).toList()
             isLoading = false
             searchTrackList.forEach{
                 deezerService.lazyLoadImages(it.album)
                 deezerService.lazyLoadImages(it.artist)
+            }
+        }
+    }
+    fun deleteSearchHistory() {
+        searchHistory = emptyList()
+        persistSearchHistory()
+    }
+    fun deleteSearchTerm(term: String) {
+        searchHistory = searchHistory.filter { it != term }
+        persistSearchHistory()
+    }
+
+    private fun addToSearchHistory(term: String) {
+        if (term.isNotBlank() && !searchHistory.contains(searchText)) {
+            searchHistory = searchHistory.plus(searchText)
+            persistSearchHistory()
+        }
+    }
+    private fun persistSearchHistory() {
+        modelScope.launch { storageService.writeSearchHistory(searchHistory) }
+    }
+    private fun loadSearchHistoryFromLocalStorage() {
+        modelScope.launch {
+            val searchTermsFlow = storageService.readSearchHistory()
+            searchTermsFlow.collect { searchTerms ->
+                waitUntilMutableStateReadable()
+                searchHistory = searchTerms
             }
         }
     }
@@ -182,5 +229,5 @@ class AppModel(private val deezerService: DeezerService, private val storageServ
 // if isOpeningTransition is true, then the transition is meant to open the screen, otherwise close the screen
 // might be relevant for animation, for example closing transitions may want to slide in the visible screen from left to right
 // while opening transition may want to slide in the visible screen from right to left
-data class Screen(val composeFunction: @Composable () -> Unit, val isOpeningTransition: Boolean, val previousScreenName: String)
+data class Screen(val composeFunction: @Composable () -> Unit, val isOpeningTransition: Boolean, val screenName: String)
 class ScreenTransition(val newScreen: () -> Unit, val oldScreen: (() -> Unit) ? = null, val forward: Boolean = true)

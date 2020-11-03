@@ -24,11 +24,11 @@ fun AppUI(model: ModelContainer) {
             // TODO add slide in / out animation between current and previous screen using the CrossfadeSlide function
             currentScreen.composeFunction()
 
-            SlideUpVertically(visible = isPlayerOpen) {
+            SlideInVerticallyFromBottom(visible = isPlayerOpen) {
                 PlayerScreen(model)
             }
 
-            SlideUpVertically(visible = isTrackOptionsOpen) {
+            SlideInVerticallyFromBottom(visible = isTrackOptionsOpen) {
                 TrackOptions(model)
             }
         }

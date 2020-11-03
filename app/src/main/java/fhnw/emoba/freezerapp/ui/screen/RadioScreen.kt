@@ -23,11 +23,7 @@ import fhnw.emoba.freezerapp.ui.theme.*
 fun RadioScreen(model: ModelContainer) {
     model.appModel.apply {
         Scaffold(
-            topBar = {
-                PreviousScreenBar(text = model.artistModel.getArtist().name, onBack = {
-                    closeNestedScreen()
-                }, model=model.appModel)
-            },
+            topBar = { PreviousScreenBar(model=model.appModel) },
             bottomBar = { MenuWithPlayBar(model = model) },
             bodyContent = { Body(model = model) },
         )
@@ -40,10 +36,9 @@ fun RadioScreen(model: ModelContainer) {
 private fun Body(model: ModelContainer) {
     model.appModel.apply {
         LazyTrackList(
-            playerModel = model.playerModel,
+            model = model,
             tracks = currentRadioTracks,
-            trackListName = currentRadio.title,
-            title = null
+            trackListName = currentRadio.title
         ) {
             Column(
                 modifier = Modifier.padding(start = PADDING_SMALL, top = PADDING_LARGE),

@@ -20,7 +20,6 @@ import androidx.compose.ui.graphics.vector.VectorAsset
 import androidx.compose.ui.unit.dp
 import fhnw.emoba.freezerapp.model.ModelContainer
 import fhnw.emoba.freezerapp.ui.IconImage
-import fhnw.emoba.freezerapp.ui.SlideUpVertically
 import fhnw.emoba.freezerapp.ui.theme.PADDING_SMALL
 
 @ExperimentalAnimationApi
@@ -38,7 +37,7 @@ private fun Body(model: ModelContainer) {
         Column(
             verticalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier.fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.6f))
+                .background(Color.Black.copy(alpha = 0.7f))
                 .clickable(onClick = { closeTrackOptions()})
         ) {
             Box{} // box is only to push down the second box, via SpaceBetween from parent
@@ -89,14 +88,14 @@ private fun Options(model: ModelContainer) {
             model.albumModel.loadAlbum(track.album.id)
             closeTrackOptions()
             isPlayerOpen = false
-            openNestedScreen(previousScreenName = null) { AlbumScreen(model = model) }
+            openNestedScreen(title = track.album.title) { AlbumScreen(model = model) }
         }, RoundedCornerShape(topLeft = cornedRounding, topRight = cornedRounding))
         Divider()
         OptionsListItem("Show Artist", Icons.Filled.Person, onClick = {
             model.artistModel.setArtist(track.artist)
             closeTrackOptions()
             isPlayerOpen = false
-            openNestedScreen(previousScreenName = null) { ArtistScreen(model = model) }
+            openNestedScreen(title = track.artist.name) { ArtistScreen(model = model) }
         })
         Divider()
         val isFavorite = isFavorite(track.id)

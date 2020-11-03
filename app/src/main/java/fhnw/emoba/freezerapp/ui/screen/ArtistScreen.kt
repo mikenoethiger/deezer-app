@@ -3,6 +3,7 @@ package fhnw.emoba.freezerapp.ui.screen
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.asDisposableClock
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.Text
 import androidx.compose.foundation.animation.defaultFlingConfig
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -17,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.VerticalGradient
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.AnimationClockAmbient
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import fhnw.emoba.freezerapp.data.Artist
@@ -30,16 +32,12 @@ import fhnw.emoba.freezerapp.ui.theme.PADDING_SMALL
 @Composable
 @ExperimentalAnimationApi
 fun ArtistScreen(model: ModelContainer) {
-    model.apply {
+    model.artistModel.apply {
         // create a new LazyListState to reset scroll position for the LazyTrackList whenever the artist screen is recomposed
         // otherwise we stay at the same scroll position, when for example navigating from one artist to another
         val lazyListState = LazyListState(0, 0, defaultFlingConfig(), AnimationClockAmbient.current.asDisposableClock())
         Scaffold(
-            topBar = { PreviousScreenBar(text = artistModel.getArtist().name,
-                onBack = {
-                    model.artistModel.setPreviousArtist()
-                    appModel.closeNestedScreen()
-                }, model=appModel) },
+            topBar = { PreviousScreenBar(model=model.appModel, onBack = { setPreviousArtist() }) },
             bottomBar = { MenuWithPlayBar(model=model) },
             bodyContent = { ArtistBody(model=model, lazyListState = lazyListState) },
         )
@@ -58,11 +56,10 @@ private fun ArtistBody(model: ModelContainer, lazyListState: LazyListState) {
             LazyTrackList(
                 tracks = getMoreTracks(),
                 trackListName = artist.name,
-                title = null,
-                playerModel = model.playerModel,
+                model = model,
                 lazyListState = lazyListState) {
                 // make some space to show the background image when not scrolled down
-                Box(modifier = Modifier.padding(top = 250.dp)){}
+                Box(modifier = Modifier.padding(top = 300.dp)){}
                 Header(model)
             }
         }
@@ -76,33 +73,30 @@ private fun Header(model: ModelContainer) {
     model.artistModel.apply {
         val artist = getArtist()
         Column(modifier = Modifier
-            .background(VerticalGradient(listOf(Color.Transparent, MaterialTheme.colors.background), 0f, 300f))
-            .padding(top = PADDING_MEDIUM)
+            .background(VerticalGradient(listOf(Color.Transparent, MaterialTheme.colors.background), 0f, 200f))
+            .padding(start=10.dp, top=25.dp)
             .fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(PADDING_MEDIUM)
         ) {
-            InterpretTitle(artist)
+            Title(artist)
             TopTracks(model = model)
-            AlbumListHorizontal(model=model, albums = albums, currentScreenName = artist.name)
+            H5(text="Albums", fontWeight = FontWeight.Bold)
+            AlbumListHorizontal(model=model, albums = albums)
             Divider()
-            ArtistListHorizontal(
-                model = model,
-                artists = contributors,
-                title="Similar Artists",
-                currentScreenName = artist.name
-            )
+            H5(text="Similar Artists", fontWeight = FontWeight.Bold)
+            ArtistListHorizontal(model = model, artists = contributors)
             Divider()
-            H5("More Tracks", modifier = Modifier.padding(start= PADDING_SMALL, bottom = PADDING_SMALL))
+            H5("More Tracks", modifier = Modifier.padding(start= PADDING_SMALL, bottom = PADDING_SMALL), fontWeight = FontWeight.Bold)
         }
     }
 }
 
 @Composable
-private fun InterpretTitle(artist: Artist) {
+private fun Title(artist: Artist) {
     Column {
-        H4(text = artist.name, overflow = TextOverflow.Ellipsis, maxLines = 1, modifier = Modifier.padding(start = PADDING_SMALL))
+        Text(artist.name, style = MaterialTheme.typography.h4.copy(fontWeight = FontWeight.ExtraBold), overflow = TextOverflow.Ellipsis, maxLines = 1)
         val fans = formatNumber(artist.nbFan)
-        Subtitle1(text = "$fans fans", modifier = Modifier.padding(start = 10.dp))
+        Subtitle1(text = "$fans fans")
     }
 }
 
@@ -117,7 +111,7 @@ private fun TopTracks(model: ModelContainer) {
                     trackList = trackList,
                     trackListName = getArtist().name,
                     index = index,
-                    playerModel = model.playerModel,
+                    model = model,
                     subtitle = { t -> "Rank ${formatNumber(t.rank)}" },
                     showIndex = true)
             }

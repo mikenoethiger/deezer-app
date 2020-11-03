@@ -19,7 +19,7 @@ class LocalStorageServiceTest {
     }
 
     @Test
-    fun testReadWrite() {
+    fun testReadWriteFavorites() {
         // given
         val storageService = createStorageService()
         val trackIDs = listOf(1,2,3,4,5)
@@ -38,7 +38,7 @@ class LocalStorageServiceTest {
     }
 
     @Test
-    fun testReadWriteEmpty() {
+    fun testReadWriteEmptyFavorites() {
         // given
         val storageService = createStorageService()
         // when
@@ -51,6 +51,43 @@ class LocalStorageServiceTest {
             val trackIDsFlow = storageService.readFavoriteTracks()
             trackIDsFlow.collect { IDs ->
                 assert(IDs.isEmpty())
+            }
+        }
+    }
+
+    @Test
+    fun testReadWriteSearchHistory() {
+        // given
+        val storageService = createStorageService()
+        val searchTerms = listOf("term1", "term2", "term3")
+        // when
+        val writeJob = GlobalScope.launch {
+            storageService.writeSearchHistory(searchTerms)
+        }
+        // then
+        GlobalScope.launch {
+            writeJob.join()
+            val searchTermsFlow = storageService.readSearchHistory()
+            searchTermsFlow.collect { result ->
+                assert(searchTerms == result)
+            }
+        }
+    }
+
+    @Test
+    fun testReadWriteEmptySearchHistory() {
+        // given
+        val storageService = createStorageService()
+        // when
+        val writeJob = GlobalScope.launch {
+            storageService.writeFavoriteTracks(emptyList())
+        }
+        // then
+        GlobalScope.launch {
+            writeJob.join()
+            val searchTermsFlow = storageService.readFavoriteTracks()
+            searchTermsFlow.collect { result ->
+                assert(result.isEmpty())
             }
         }
     }

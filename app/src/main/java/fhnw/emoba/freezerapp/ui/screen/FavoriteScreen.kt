@@ -44,7 +44,7 @@ private fun FavoriteBody(model: ModelContainer) {
             }
         } else {
             LazyTrackList(
-                playerModel = model.playerModel,
+                model = model,
                 tracks = favoriteTracks,
                 trackListName = "Favorites"
             ) {}

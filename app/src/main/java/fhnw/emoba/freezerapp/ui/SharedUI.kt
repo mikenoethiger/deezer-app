@@ -21,6 +21,7 @@ import androidx.compose.ui.res.LoadedResource
 import androidx.compose.ui.res.PendingResource
 import androidx.compose.ui.res.loadImageResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -39,18 +40,20 @@ import fhnw.emoba.freezerapp.ui.theme.*
 // App components
 
 @Composable
-fun PreviousScreenBar(text: String, onBack: () -> Unit, model: AppModel) {
-    val previousScreenName = model.getCurrentNestedScreen {}.previousScreenName
+fun PreviousScreenBar(model: AppModel, onBack: () -> Unit = {}) {
+    val previousScreenName = model.getPreviousScreenName()
+    val backAction = {
+        onBack()
+        model.closeNestedScreen()
+    }
     TopAppBar(
         title = {
-            SingleLineText(
-                previousScreenName, textAlign = TextAlign.Center, modifier = Modifier.clickable(
-                    onClick = onBack
-                )
-            )
+            SingleLineText(previousScreenName,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.clickable(onClick = backAction))
         },
         navigationIcon = {
-            IconButton(onClick = onBack) { Icon(Icons.Filled.KeyboardArrowLeft) }
+            IconButton(onClick = backAction) { Icon(Icons.Filled.KeyboardArrowLeft) }
         })
 }
 
@@ -59,7 +62,7 @@ fun PreviousScreenBar(text: String, onBack: () -> Unit, model: AppModel) {
 fun MenuWithPlayBar(model: ModelContainer) {
     model.playerModel.apply {
         Column {
-            SlideUpVertically(visible = track() != NULL_TRACK) {
+            SlideInVerticallyFromBottom(visible = track() != NULL_TRACK) {
                 PlayerBar(model)
             }
             Divider(color = MaterialTheme.colors.primaryVariant, thickness = 2.dp)
@@ -87,10 +90,13 @@ fun MenuBar(model: AppModel) {
 }
 
 @Composable
-fun DefaultTopBar(title: String, icon: VectorAsset, onIconClick: () -> Unit = {}) {
+fun DefaultTopBar(title: String, icon: VectorAsset?, onIconClick: () -> Unit = {}) {
     TopAppBar(title = {
-        Row(horizontalArrangement = Arrangement.spacedBy(PADDING_SMALL), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onIconClick) { Icon (icon) }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(PADDING_SMALL),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (icon != null) IconImage(icon = icon, color = MaterialTheme.colors.onPrimary)
             Text(title)
         }
     })
@@ -105,20 +111,17 @@ fun DefaultTopBar(title: String, icon: VectorAsset, onIconClick: () -> Unit = {}
 fun AlbumListHorizontal(
     model: ModelContainer,
     albums: List<Album>,
-    currentScreenName: String,
-    title: String? = "Albums",
     modifier: Modifier = Modifier) {
     Column(
-        modifier = Modifier.padding(start = PADDING_SMALL).then(modifier),
+        modifier = Modifier.then(modifier),
         verticalArrangement = Arrangement.spacedBy(PADDING_SMALL)
     ) {
         model.apply {
-            if (title != null) H5(text = title)
             HorizontalItemList(
                 albums,
                 onClick = { album ->
                     albumModel.loadAlbum(album.id)
-                    appModel.openNestedScreen(currentScreenName) {
+                    appModel.openNestedScreen(album.title) {
                         AlbumScreen(model=model)
                     }
                 },
@@ -139,21 +142,18 @@ fun AlbumListHorizontal(
 fun ArtistListHorizontal(
     model: ModelContainer,
     artists: List<Artist>,
-    currentScreenName: String,
     modifier: Modifier = Modifier,
-    title: String? = "Artists"
 ) {
     model.apply {
         Column(
-            modifier = Modifier.padding(start = PADDING_SMALL).then(modifier),
+            modifier = Modifier.then(modifier),
             verticalArrangement = Arrangement.spacedBy(PADDING_SMALL)
         ) {
-            if (title != null) H5(text = title)
             HorizontalItemList(
                 artists,
                 onClick = { artist ->
                     artistModel.setArtist(artist)
-                    appModel.openNestedScreen(currentScreenName) {
+                    appModel.openNestedScreen(title=artist.name) {
                         ArtistScreen(model = model)
                     }
                 },
@@ -176,11 +176,11 @@ private fun <T> HorizontalItemList(
 ) {
     LazyRowFor(items = items, modifier = modifier) { item ->
         Column(
-            modifier = Modifier.padding(0.dp, 0.dp, 10.dp).width(imageSize)
+            modifier = Modifier.width(imageSize).padding(end=10.dp)
                 .clickable(onClick = { onClick(item) }),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            ImageFillWidth(asset = image(item), width = imageSize)
+            ImageFillWidth(asset = image(item), width = imageSize, elevation = 10.dp)
             Text(
                 text = text(item),
                 style = MaterialTheme.typography.subtitle1,
@@ -200,10 +200,9 @@ private fun <T> HorizontalItemList(
 @ExperimentalLazyDsl
 @Composable
 fun LazyTrackList(
-    playerModel: PlayerModel,
+    model: ModelContainer,
     tracks: List<Track>,
     trackListName: String,
-    title: String? = null,
     tracksSubtitle: (Track) -> String = { it.artist.name },
     showTrackIndex: Boolean = false,
     showImages: Boolean = true,
@@ -219,12 +218,8 @@ fun LazyTrackList(
         if (firstItem != null) {
             item { firstItem() }
         }
-        if (title != null) item {
-            H5(title, modifier = Modifier
-                .padding(start= PADDING_SMALL, bottom = PADDING_SMALL))
-        }
         itemsIndexed(tracks) { index, track ->
-            TrackListItem(playerModel = playerModel,
+            TrackListItem(model = model,
                 track = track, trackList=tracks, trackListName = trackListName,
                 index=index, subtitle = tracksSubtitle,
                 showIndex = showTrackIndex,
@@ -243,7 +238,7 @@ fun TrackListItem(
     subtitle: (Track) -> String = { it.artist.name },
     showIndex: Boolean = false,
     showImage: Boolean = true,
-    playerModel: PlayerModel
+    model: ModelContainer
 ) {
 
     val icon: (@Composable () -> Unit)? = if (!showImage && !showIndex) null else {{
@@ -254,10 +249,10 @@ fun TrackListItem(
         text = { SingleLineText(track.title) },
         secondaryText = { SingleLineText(subtitle(track)) },
         icon = icon,
-        trailing = { IconButton(onClick = {}) { Icon(Icons.Filled.MoreVert) } },
+        trailing = { TrackOptionsButton(appModel = model.appModel, track = track, color = MaterialTheme.colors.onBackground) },
         modifier = Modifier.background(MaterialTheme.colors.background).clickable(onClick = {
-            playerModel.setTrack(track, trackList, trackListName)
-            playerModel.play()
+            model.playerModel.setTrack(track, trackList, trackListName)
+            model.playerModel.play()
         })
     )
     Divider(modifier = Modifier.background(MaterialTheme.colors.background))
@@ -345,15 +340,13 @@ fun ImageFillHeight(asset: ImageAsset, height: Dp = 0.dp) {
 }
 
 @Composable
-fun ImageFillWidth(asset: ImageAsset, width: Dp = 0.dp) {
-    val modifier = if (width > 0.dp) Modifier.height(width) else Modifier
-    return Image(asset = asset, contentScale = ContentScale.FillWidth, modifier = modifier)
-}
-
-@Composable
-fun DrawerIcon(scaffoldState: ScaffoldState) {
-    IconButton(onClick = { scaffoldState.drawerState.open() }) {
-        Icon(Icons.Filled.Menu)
+fun ImageFillWidth(asset: ImageAsset, width: Dp = 0.dp, elevation: Dp = 0.dp) {
+    return Card(elevation = elevation) {
+        Image(
+            asset = asset,
+            modifier = Modifier.width(width),
+            contentScale = ContentScale.FillWidth,
+        )
     }
 }
 
@@ -408,10 +401,38 @@ private fun ImageLoadInBackground(@DrawableRes resId: Int) {
 
 @ExperimentalAnimationApi
 @Composable
-fun SlideUpVertically(
+fun SlideInVerticallyFromTop(
     visible: Boolean,
-    initialOffsetY: (Int) -> Int = { it },
-    targetOffsetY: (Int) -> Int = { it },
+    content: @Composable () -> Unit
+) {
+    SlideInVertically(
+        visible = visible,
+        initialOffsetY = { -it },
+        targetOffsetY = { -it },
+        content = content
+    )
+}
+
+@ExperimentalAnimationApi
+@Composable
+fun SlideInVerticallyFromBottom(
+    visible: Boolean,
+    content: @Composable () -> Unit
+) {
+    SlideInVertically(
+        visible = visible,
+        initialOffsetY = { it },
+        targetOffsetY = { it },
+        content = content
+    )
+}
+
+@ExperimentalAnimationApi
+@Composable
+fun SlideInVertically(
+    visible: Boolean,
+    initialOffsetY: (Int) -> Int,
+    targetOffsetY: (Int) -> Int,
     content: @Composable () -> Unit
 ) {
     // in order to slide from bottom to top, initial and target offset both have to be the content's height
@@ -448,69 +469,78 @@ fun MaterialText(
     textStyle: TextStyle,
     overflow: TextOverflow = TextOverflow.Clip,
     maxLines: Int = Int.MAX_VALUE,
+    fontWeight: FontWeight? = null,
     modifier: Modifier = Modifier
-) = Text(text, style = textStyle, overflow = overflow, maxLines = maxLines, modifier = modifier)
+) = Text(text, style = textStyle, overflow = overflow, maxLines = maxLines, modifier = modifier, fontWeight = fontWeight)
 
 @Composable
 fun H1(
     text: String,
     overflow: TextOverflow = TextOverflow.Clip,
     maxLines: Int = Int.MAX_VALUE,
+    fontWeight: FontWeight? = null,
     modifier: Modifier = Modifier
-) = MaterialText(text, MaterialTheme.typography.h1, overflow, maxLines, modifier)
+) = MaterialText(text, MaterialTheme.typography.h1, overflow, maxLines, fontWeight, modifier)
 
 @Composable
 fun H2(
     text: String,
     overflow: TextOverflow = TextOverflow.Clip,
     maxLines: Int = Int.MAX_VALUE,
+    fontWeight: FontWeight? = null,
     modifier: Modifier = Modifier
-) = MaterialText(text, MaterialTheme.typography.h2, overflow, maxLines, modifier)
+) = MaterialText(text, MaterialTheme.typography.h2, overflow, maxLines, fontWeight, modifier)
 
 @Composable
 fun H3(
     text: String,
     overflow: TextOverflow = TextOverflow.Clip,
     maxLines: Int = Int.MAX_VALUE,
+    fontWeight: FontWeight? = null,
     modifier: Modifier = Modifier
-) = MaterialText(text, MaterialTheme.typography.h3, overflow, maxLines, modifier)
+) = MaterialText(text, MaterialTheme.typography.h3, overflow, maxLines, fontWeight, modifier)
 
 @Composable
 fun H4(
     text: String,
     overflow: TextOverflow = TextOverflow.Clip,
     maxLines: Int = Int.MAX_VALUE,
+    fontWeight: FontWeight? = null,
     modifier: Modifier = Modifier
-) = MaterialText(text, MaterialTheme.typography.h4, overflow, maxLines, modifier)
+) = MaterialText(text, MaterialTheme.typography.h4, overflow, maxLines, fontWeight, modifier)
 
 @Composable
 fun H5(
     text: String,
     overflow: TextOverflow = TextOverflow.Clip,
     maxLines: Int = Int.MAX_VALUE,
+    fontWeight: FontWeight? = null,
     modifier: Modifier = Modifier
-) = MaterialText(text, MaterialTheme.typography.h5, overflow, maxLines, modifier)
+) = MaterialText(text, MaterialTheme.typography.h5, overflow, maxLines, fontWeight, modifier)
 
 @Composable
 fun H6(
     text: String,
     overflow: TextOverflow = TextOverflow.Clip,
     maxLines: Int = Int.MAX_VALUE,
+    fontWeight: FontWeight? = null,
     modifier: Modifier = Modifier
-) = MaterialText(text, MaterialTheme.typography.h6, overflow, maxLines, modifier)
+) = MaterialText(text, MaterialTheme.typography.h6, overflow, maxLines, fontWeight, modifier)
 
 @Composable
 fun Subtitle1(
     text: String,
     overflow: TextOverflow = TextOverflow.Clip,
     maxLines: Int = Int.MAX_VALUE,
+    fontWeight: FontWeight? = null,
     modifier: Modifier = Modifier
-) = MaterialText(text, MaterialTheme.typography.subtitle1, overflow, maxLines, modifier)
+) = MaterialText(text, MaterialTheme.typography.subtitle1, overflow, maxLines, fontWeight, modifier)
 
 @Composable
 fun Subtitle2(
     text: String,
     overflow: TextOverflow = TextOverflow.Clip,
     maxLines: Int = Int.MAX_VALUE,
+    fontWeight: FontWeight? = null,
     modifier: Modifier = Modifier
-) = MaterialText(text, MaterialTheme.typography.subtitle2, overflow, maxLines, modifier)
+) = MaterialText(text, MaterialTheme.typography.subtitle2, overflow, maxLines, fontWeight, modifier)

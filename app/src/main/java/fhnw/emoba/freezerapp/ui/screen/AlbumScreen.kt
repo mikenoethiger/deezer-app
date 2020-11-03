@@ -2,18 +2,21 @@ package fhnw.emoba.freezerapp.ui.screen
 
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.Text
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.ExperimentalLazyDsl
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Card
 import androidx.compose.material.Divider
+import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageAsset
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import fhnw.emoba.freezerapp.data.*
@@ -28,9 +31,7 @@ fun AlbumScreen(model: ModelContainer) {
     model.appModel.apply {
         Scaffold(
             topBar = {
-                PreviousScreenBar(text = model.artistModel.getArtist().name, onBack = {
-                    closeNestedScreen()
-                }, model=model.appModel)
+                PreviousScreenBar(model=model.appModel)
             },
             bottomBar = { MenuWithPlayBar(model = model) },
             bodyContent = { Body(model = model) },
@@ -44,10 +45,9 @@ fun AlbumScreen(model: ModelContainer) {
 private fun Body(model: ModelContainer) {
     model.albumModel.apply {
         LazyTrackList(
-            playerModel = model.playerModel,
+            model = model,
             tracks = album.tracks,
             trackListName = album.title,
-            title = null,
             showImages = false
         ) {
             Column(
@@ -55,7 +55,12 @@ private fun Body(model: ModelContainer) {
                 verticalArrangement = Arrangement.spacedBy(PADDING_MEDIUM)
             ) {
                 CoverImage(album.imageX400)
-                H4(text = album.title, overflow = TextOverflow.Ellipsis, maxLines = 1)
+                Text(album.title,
+                    style = MaterialTheme.typography.h5.copy(fontWeight = FontWeight.Bold),
+                    overflow = TextOverflow.Ellipsis,
+                    maxLines = 1,
+                    modifier = Modifier.padding(vertical = 10.dp)
+                )
                 Divider()
                 val fans = formatNumber(album.fans)
                 Subtitle1(text = "Album • ${album.releaseYear()} • $fans fans")
