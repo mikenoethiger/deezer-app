@@ -36,7 +36,6 @@ object PlayerModel {
     fun trackListName() = trackListName
     fun setTrack(track: Track, trackList: List<Track>, trackListName: String) {
         loadTrack(track)
-        this.track = track
         this.trackList = trackList
         this.trackListName = trackListName
     }
@@ -75,6 +74,7 @@ object PlayerModel {
 
     private fun loadTrack(track: Track) {
         isReady = false
+        this.track = track
         player.reset()
         player.setDataSource(track.preview)
         player.prepareAsync()

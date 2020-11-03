@@ -1,23 +1,12 @@
 package fhnw.emoba.freezerapp.ui
 
-import androidx.compose.animation.*
-import androidx.compose.foundation.*
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Box
+import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.foundation.lazy.ExperimentalLazyDsl
-import androidx.compose.material.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.ImeAction
-import fhnw.emoba.freezerapp.model.*
-import fhnw.emoba.freezerapp.ui.screen.FavoriteScreen
-import fhnw.emoba.freezerapp.ui.screen.PlayerScreen
-import fhnw.emoba.freezerapp.ui.screen.RadiosScreen
-import fhnw.emoba.freezerapp.ui.screen.SearchScreen
-import fhnw.emoba.freezerapp.ui.theme.PADDING_MEDIUM
+import fhnw.emoba.freezerapp.model.MainMenu
+import fhnw.emoba.freezerapp.model.ModelContainer
+import fhnw.emoba.freezerapp.ui.screen.*
 
 @ExperimentalLazyDsl
 @ExperimentalAnimationApi
@@ -26,7 +15,7 @@ fun AppUI(model: ModelContainer) {
     model.appModel.apply {
         MaterialTheme {
             var mainScreen: @Composable () -> Unit = { DeezerLogo() }
-            when (currentMenu.ordinal) {
+            when (currentMenu().ordinal) {
                 MainMenu.FAVORITES.ordinal -> mainScreen = { FavoriteScreen(model) }
                 MainMenu.SEARCH.ordinal -> mainScreen = { SearchScreen(model) }
                 MainMenu.RADIO.ordinal -> mainScreen = { RadiosScreen(model) }
@@ -37,6 +26,10 @@ fun AppUI(model: ModelContainer) {
 
             SlideUpVertically(visible = isPlayerOpen) {
                 PlayerScreen(model)
+            }
+
+            SlideUpVertically(visible = isTrackOptionsOpen) {
+                TrackOptions(model)
             }
         }
     }

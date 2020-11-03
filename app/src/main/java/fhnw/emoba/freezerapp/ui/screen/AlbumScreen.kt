@@ -33,7 +33,7 @@ fun AlbumScreen(model: ModelContainer) {
                 }, model=model.appModel)
             },
             bottomBar = { MenuWithPlayBar(model = model) },
-            bodyContent = { AlbumBody(model = model) },
+            bodyContent = { Body(model = model) },
         )
     }
 }
@@ -41,7 +41,7 @@ fun AlbumScreen(model: ModelContainer) {
 @ExperimentalLazyDsl
 @ExperimentalAnimationApi
 @Composable
-private fun AlbumBody(model: ModelContainer) {
+private fun Body(model: ModelContainer) {
     model.albumModel.apply {
         LazyTrackList(
             playerModel = model.playerModel,
@@ -54,7 +54,7 @@ private fun AlbumBody(model: ModelContainer) {
                 modifier = Modifier.padding(start = PADDING_SMALL, top = PADDING_LARGE),
                 verticalArrangement = Arrangement.spacedBy(PADDING_MEDIUM)
             ) {
-                AlbumImage(album.imageX400)
+                CoverImage(album.imageX400)
                 H4(text = album.title, overflow = TextOverflow.Ellipsis, maxLines = 1)
                 Divider()
                 val fans = formatNumber(album.fans)
@@ -68,7 +68,7 @@ private fun AlbumBody(model: ModelContainer) {
 }
 
 @Composable
-private fun AlbumImage(image: ImageAsset) {
+private fun CoverImage(image: ImageAsset) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
         Card(elevation = 20.dp ) {
             Image(

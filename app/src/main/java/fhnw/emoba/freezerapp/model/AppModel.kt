@@ -33,6 +33,19 @@ class AppModel(private val deezerService: DeezerService, private val storageServ
     var currentRadioTracks: List<Track> by mutableStateOf(emptyList())
     init { loadFavoriteTracksFromLocalStorage() }
 
+    // track to be shown in the track options screen
+    private var currentOptionsTrack by mutableStateOf(NULL_TRACK)
+    var isTrackOptionsOpen by mutableStateOf(false)
+
+    fun currentOptionsTrack() = currentOptionsTrack
+    fun showTrackOptions(track: Track) {
+        currentOptionsTrack = track
+        isTrackOptionsOpen = true
+    }
+    fun closeTrackOptions() {
+        isTrackOptionsOpen = false
+    }
+
     fun lazyLoadRadios() {
         if (radios.isNotEmpty()) return
         radiosLoading = true
@@ -77,6 +90,10 @@ class AppModel(private val deezerService: DeezerService, private val storageServ
             }
         }
     }
+    fun toggleLike(track: Track) {
+        if (isFavorite(track.id)) unlikeTrack(track)
+        else likeTrack(track)
+    }
     fun likeTrack(track: Track) {
         favoriteTracks = favoriteTracks.plus(track)
         modelScope.launch {
@@ -91,37 +108,38 @@ class AppModel(private val deezerService: DeezerService, private val storageServ
     }
     fun isFavorite(trackID: Int): Boolean = favoriteTracks.map { it.id }.contains(trackID)
 
-    private var nestedScreens: MutableMap<MainMenu, List<Screen>> = mutableMapOf()
-    var currentNestedScreen: Map<MainMenu, Screen> by mutableStateOf(mapOf())
+    private var nestedScreens: Map<MainMenu, List<Screen>> by mutableStateOf(emptyMap())
+    // var currentNestedScreen: Map<MainMenu, Screen> by mutableStateOf(mapOf())
     private var currentMenu: MainMenu by mutableStateOf(MainMenu.SEARCH)
 
-//    fun currentMenu() = currentMenu
-//    fun setMenu(mainMenu: MainMenu) {
-//        if (mainMenu == currentMenu) {
-//
-//        }
-//    }
+    fun currentMenu() = currentMenu
+    fun setMenu(mainMenu: MainMenu) {
+        // drop screen stack of current menu, when selecting current menu twice
+        if (currentMenu == mainMenu) {
+            nestedScreens = nestedScreens.minus(currentMenu)
+        }
+        currentMenu = mainMenu
+    }
     fun getCurrentNestedScreen(defaultUI: @Composable () -> Unit): Screen {
-        if (!currentNestedScreen.containsKey(currentMenu)) return Screen(defaultUI, true, "")
-        return currentNestedScreen[currentMenu]!!
+        if (nestedScreens.getOrDefault(currentMenu, emptyList()).isEmpty()) return Screen(defaultUI, true, "")
+        return nestedScreens[currentMenu]!!.last()
     }
     fun closeNestedScreen() {
-        if (!nestedScreens.containsKey(currentMenu)) return
-        if (nestedScreens[currentMenu]!!.isEmpty()) return
-        if (nestedScreens[currentMenu]!!.size == 1) {
-            nestedScreens[currentMenu] = emptyList()
-            currentNestedScreen = currentNestedScreen.minus(currentMenu)
-        } else {
-            nestedScreens[currentMenu] = nestedScreens[currentMenu]!!.dropLast(1)
-            val newLast = nestedScreens[currentMenu]!!.last().copy(isOpeningTransition = false)
-            currentNestedScreen = currentNestedScreen.plus(Pair(currentMenu, newLast))
-        }
+        val currentScreenStack = nestedScreens.getOrDefault(currentMenu, emptyList())
+        nestedScreens = nestedScreens.plus(Pair(currentMenu, currentScreenStack.dropLast(1)))
     }
-    fun openNestedScreen(previousScreenName: String, ui: @Composable () -> Unit) {
-        nestedScreens.putIfAbsent(currentMenu, emptyList())
-        val screen = Screen(ui, true, previousScreenName)
-        nestedScreens[currentMenu] = nestedScreens[currentMenu]!!.plus(screen)
-        currentNestedScreen = currentNestedScreen.plus(Pair(currentMenu, screen))
+
+    /**
+     * Open a nested screen in the currentMenu
+     * @param previousScreenName name of the previous screen, can be used e.g. to display a back button labelled with the previous screen name
+     *                           if null is passed, previousScreenName will be taken from the preceding screen, if there is no preceding screen an empty string will be taken
+     */
+    fun openNestedScreen(previousScreenName: String?, ui: @Composable () -> Unit) {
+        val currentScreenStack = nestedScreens.getOrDefault(currentMenu, emptyList())
+        val prevScreenName = previousScreenName
+            ?: if (currentScreenStack.isNotEmpty()) currentScreenStack.last().previousScreenName else currentMenu.title
+        val screen = Screen(ui, true, prevScreenName)
+        nestedScreens = nestedScreens.plus(Pair(currentMenu, currentScreenStack.plus(screen)))
     }
 
     fun searchSongs() {

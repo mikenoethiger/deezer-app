@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageAsset
 import androidx.compose.ui.graphics.vector.VectorAsset
 import androidx.compose.ui.layout.ContentScale
@@ -71,12 +72,12 @@ fun MenuWithPlayBar(model: ModelContainer) {
 fun MenuBar(model: AppModel) {
     model.apply {
         TabRow(
-            selectedTabIndex = currentMenu.ordinal
+            selectedTabIndex = currentMenu().ordinal
         ) {
             MainMenu.values().map { tab ->
                 Tab(
-                    selected = currentMenu == tab,
-                    onClick = { currentMenu = tab },
+                    selected = currentMenu() == tab,
+                    onClick = { setMenu(tab) },
                     text = { Text(tab.title) },
                     icon = { Icon(tab.icon) }
                 )
@@ -274,15 +275,26 @@ fun TrackListItemIcon(track: Track, index: Int, showIndex: Boolean = true, showI
 }
 
 @Composable
-fun LikeButton(appModel: AppModel, track: Track, modifier: Modifier = Modifier) {
+fun LikeButton(appModel: AppModel, track: Track, color: Color, modifier: Modifier = Modifier) {
     appModel.apply {
         val isLiked = isFavorite(track.id)
         IconButton(onClick = {
-            if (isLiked) appModel.unlikeTrack(track)
-            else appModel.likeTrack(track)
+            toggleLike(track)
         }, modifier=modifier) {
             val icon = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder
-            Icon(icon, tint=MaterialTheme.colors.onPrimary)
+            Icon(icon, tint=color)
+        }
+    }
+}
+
+@Composable
+fun TrackOptionsButton(appModel: AppModel, track: Track, color: Color, vertical: Boolean = true, modifier: Modifier = Modifier) {
+    appModel.apply {
+        IconButton(onClick = {
+            showTrackOptions(track)
+        }, modifier=modifier) {
+            val icon = if (vertical) Icons.Filled.MoreVert else Icons.Filled.MoreHoriz
+            Icon(icon, tint=color)
         }
     }
 }
@@ -290,11 +302,18 @@ fun LikeButton(appModel: AppModel, track: Track, modifier: Modifier = Modifier) 
 // Pure components (i.e. model independent)
 
 @Composable
-fun DividerThin(modifier: Modifier = Modifier) = Divider(thickness = THICKNESS_THIN, modifier = Modifier.padding(vertical = PADDING_MEDIUM).then(modifier))
-@Composable
-fun DividerMedium(modifier: Modifier = Modifier) = Divider(thickness = THICKNESS_MEDIUM, modifier = Modifier.padding(vertical = PADDING_MEDIUM).then(modifier))
-@Composable
-fun DividerFat(modifier: Modifier = Modifier) = Divider(thickness = THICKNESS_FAT, modifier = Modifier.padding(vertical = PADDING_MEDIUM).then(modifier))
+fun IconImage(
+    icon: VectorAsset,
+    color: Color = colorOnBackground(),
+    size: Dp = 24.dp,
+    modifier: Modifier = Modifier
+) {
+    Image(
+        asset=icon.copy(defaultWidth = size, defaultHeight = size),
+        colorFilter = ColorFilter.tint(color),
+        modifier = modifier
+    )
+}
 
 @Composable
 fun LoadingBox(message: String, modifier: Modifier = Modifier) {
@@ -303,7 +322,6 @@ fun LoadingBox(message: String, modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.fillMaxSize().then(modifier)
     ) {
-        // androidx.compose.foundation.layout.Box(modifier = Modifier.width(IMAGE_MEDIUM)){ DeezerLogo() }
         Text(message, style = MaterialTheme.typography.h5)
         CircularProgressIndicator(modifier = Modifier.padding(10.dp))
     }
@@ -418,6 +436,11 @@ fun FadeInOut(visible: Boolean, initialAlpha: Float = 0.4f, content: @Composable
 }
 
 // Material shortcuts
+
+// Colors
+
+@Composable fun colorOnBackground() = MaterialTheme.colors.onBackground
+@Composable fun colorBackground() = MaterialTheme.colors.background
 
 @Composable
 fun MaterialText(

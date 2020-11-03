@@ -20,7 +20,7 @@ class LocalStorageService(private val dataStore: DataStore<Preferences>) : Stora
     }
 
     override fun readFavoriteTracks(): Flow<List<Int>> {
-        return FreezerApp.dataStore.data.map { preferences ->
+        return dataStore.data.map { preferences ->
             when (preferences[FAVORITE_TRACKS]) {
                 null -> emptyList()
                 "" -> emptyList()

@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.ExperimentalLazyDsl
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Scaffold
 import androidx.compose.runtime.Composable
@@ -83,14 +84,14 @@ private fun Header(model: ModelContainer) {
             InterpretTitle(artist)
             TopTracks(model = model)
             AlbumListHorizontal(model=model, albums = albums, currentScreenName = artist.name)
-            DividerThin()
+            Divider()
             ArtistListHorizontal(
                 model = model,
                 artists = contributors,
                 title="Similar Artists",
                 currentScreenName = artist.name
             )
-            DividerThin()
+            Divider()
             H5("More Tracks", modifier = Modifier.padding(start= PADDING_SMALL, bottom = PADDING_SMALL))
         }
     }

@@ -26,7 +26,7 @@ fun PlayerScreen(model: ModelContainer) {
     Scaffold(
         scaffoldState = scaffoldState,
         topBar = { TopBar(model) },
-        bodyContent = { PlayerBody(model.playerModel) },
+        bodyContent = { PlayerBody(model) },
         floatingActionButtonPosition = FabPosition.End,
     )
 }
@@ -73,7 +73,6 @@ fun PlayerBar(model: ModelContainer) {
     }
 }
 
-
 @Composable
 private fun TopBar(model: ModelContainer) {
     model.playerModel.apply {
@@ -92,26 +91,37 @@ private fun TopBar(model: ModelContainer) {
                     model.appModel.isPlayerOpen = false
                 }) { Icon(Icons.Filled.KeyboardArrowDown) }
             },
-            actions = { LikeButton(model.appModel, model.playerModel.track()) })
+            actions = { TrackOptionsButton(model.appModel, model.playerModel.track(), color=MaterialTheme.colors.onPrimary, vertical = false) })
     }
 }
 
 @Composable
-private fun PlayerBody(model: PlayerModel) {
-    model.apply {
+private fun PlayerBody(model: ModelContainer) {
+    model.playerModel.apply {
         val track = track()
         Column(
             modifier = Modifier.padding(20.dp, 20.dp, 20.dp, 30.dp).fillMaxHeight(),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Image(asset = track.album.imageX400, modifier = Modifier.fillMaxWidth().fillMaxWidth().padding(bottom = 10.dp), contentScale = ContentScale.FillWidth)
-            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                H5(text = track.title, overflow = TextOverflow.Ellipsis, maxLines = 1)
+            Card(elevation = 20.dp ) {
+                Image(asset = track.album.imageX400,
+                    modifier = Modifier.fillMaxWidth(),
+                    contentScale = ContentScale.FillWidth,
+                )
+            }
+            Column {
+                Row(horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    H5(text = track.title, overflow = TextOverflow.Ellipsis, maxLines = 1)
+                    LikeButton(model.appModel, model.playerModel.track(), color=MaterialTheme.colors.onBackground)
+                }
                 H6(text = "${track.artist.name} • ${track.album.title}", overflow = TextOverflow.Ellipsis, maxLines = 1)
-                TimeSlider(model)
+                TimeSlider(model.playerModel)
                 Row(modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center) {
-                    PlayerControls(model)
+                    PlayerControls(model.playerModel)
                 }
             }
         }
@@ -121,9 +131,9 @@ private fun PlayerBody(model: PlayerModel) {
 @Composable
 private fun PlayerControls(model: PlayerModel) {
     Row(horizontalArrangement = Arrangement.spacedBy(PADDING_LARGE), verticalAlignment = Alignment.CenterVertically) {
-        PreviousButton(model, iconSize = ICON_LARGE-15.dp)
-        PlayPauseButton(model, iconSize = ICON_LARGE)
-        NextButton(model, iconSize = ICON_LARGE-15.dp)
+        PreviousButton(model, iconSize = 64.dp)
+        PlayPauseButton(model, iconSize = 86.dp)
+        NextButton(model, iconSize = 64.dp)
     }
 }
 
@@ -132,7 +142,7 @@ fun PlayPauseButton(
     playerModel: PlayerModel,
     iconSize: Dp = ICON_SMALL,
     circled: Boolean = true,
-    color: Color = MaterialTheme.colors.onBackground,
+    color: Color = MaterialTheme.colors.onBackground.copy(alpha=.8f),
     modifier: Modifier = Modifier
 ) {
     playerModel.apply {
@@ -145,16 +155,17 @@ fun PlayPauseButton(
             modifier = Modifier.size(iconSize).then(modifier),
             enabled = enabled
         ) {
-            Image(
-                icon.copy(defaultHeight = iconSize, defaultWidth = iconSize),
-                colorFilter = ColorFilter.tint(if (enabled) color else color.copy(alpha = 0.6f))
+            IconImage(
+                icon = icon,
+                size=iconSize,
+                color= if (enabled) color else color.copy(alpha = 0.5f)
             )
         }
     }
 }
 
 @Composable
-private fun PreviousButton(model: PlayerModel, iconSize: Dp = ICON_SMALL, color: Color = MaterialTheme.colors.onBackground) {
+private fun PreviousButton(model: PlayerModel, iconSize: Dp = ICON_SMALL, color: Color = MaterialTheme.colors.onBackground.copy(alpha=.8f)) {
     model.apply {
         IconButton(onClick = { previousTrack() }, modifier = Modifier.size(iconSize)) {
             Image(
@@ -166,7 +177,7 @@ private fun PreviousButton(model: PlayerModel, iconSize: Dp = ICON_SMALL, color:
 }
 
 @Composable
-private fun NextButton(model: PlayerModel, iconSize: Dp = ICON_SMALL, color: Color = MaterialTheme.colors.onBackground) {
+private fun NextButton(model: PlayerModel, iconSize: Dp = ICON_SMALL, color: Color = MaterialTheme.colors.onBackground.copy(alpha=.8f)) {
     model.apply {
         IconButton(onClick = { nextTrack() }, modifier = Modifier.size(iconSize)) {
             Image(

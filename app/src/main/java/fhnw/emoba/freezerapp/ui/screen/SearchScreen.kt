@@ -3,14 +3,15 @@ package fhnw.emoba.freezerapp.ui.screen
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.foundation.Icon
 import androidx.compose.foundation.Text
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.ExperimentalLazyDsl
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import fhnw.emoba.freezerapp.model.MainMenu
@@ -43,7 +44,9 @@ private fun SearchBody(model: ModelContainer) {
     model.appModel.apply {
         when {
             isLoading -> LoadingBox("Searching tracks...")
-            searchTrackList.isEmpty() -> CenteredDeezerLogo(modifier = Modifier.padding(bottom = 80.dp))
+            searchTrackList.isEmpty() -> {
+                CenteredDeezerLogo(modifier = Modifier.padding(bottom = 80.dp))
+            }
             else -> {
                 LazyTrackList(
                     tracks = searchTrackList,
@@ -51,10 +54,12 @@ private fun SearchBody(model: ModelContainer) {
                     title = "Tracks",
                     playerModel = model.playerModel,
                     modifier = Modifier.padding(top = PADDING_MEDIUM)) {
-                    ArtistListHorizontal(model = model, artists = searchArtists, currentScreenName = MainMenu.SEARCH.title)
-                    DividerMedium()
-                    AlbumListHorizontal(model = model, albums = searchAlbums, currentScreenName = MainMenu.SEARCH.title)
-                    DividerMedium()
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        ArtistListHorizontal(model = model, artists = searchArtists, currentScreenName = MainMenu.SEARCH.title)
+                        Divider()
+                        AlbumListHorizontal(model = model, albums = searchAlbums, currentScreenName = MainMenu.SEARCH.title)
+                        Divider()
+                    }
                 }
             }
         }
