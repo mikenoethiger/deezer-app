@@ -22,14 +22,16 @@ class AlbumModel(private val deezerService: DeezerService) {
             album = deezerService.loadAlbum(albumId)
             isLoading = false
             // load album images
-            modelScope.launch { deezerService.lazyLoadImages(album) }
+            modelScope.launch {
+                deezerService.lazyLoadImages(album)
+                // set track album images
+                album.tracks.forEach{ track ->
+                    track.album.imageX120 = album.imageX120
+                    track.album.imageX400 = album.imageX400
+                }
+            }
             // load artist images
             modelScope.launch { deezerService.lazyLoadImages(album.artist) }
-            // set track album images
-            album.tracks.forEach{ track ->
-                track.album.imageX120 = album.imageX120
-                track.album.imageX400 = album.imageX400
-            }
         }
     }
 }

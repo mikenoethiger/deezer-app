@@ -38,20 +38,12 @@ class ArtistModel(private val deezerService: DeezerService) {
             val fullArtist = deezerService.loadArtist(currentArtist.id)
             fullArtist.imageX120 = currentArtist.imageX120
             fullArtist.imageX400 = currentArtist.imageX400
-            // load artist images if not present yet
-            deezerService.lazyLoadImages(fullArtist)
             // setting to NULL_ARTIST first as a workaround, because we have the same ID,
             // hence the instances are considered equal and a direct assignment would not change anything
             currentArtist = NULL_ARTIST
             currentArtist = fullArtist
             // save model state to history
             modelHistory.push(ModelState(currentArtist, trackList, albums, contributors))
-            // load track album images
-            modelScope.launch { trackList.forEach{ deezerService.lazyLoadImages(it.album) } }
-            // load album images
-            modelScope.launch { albums.forEach{ deezerService.lazyLoadImages(it) } }
-            // load contributor images
-            modelScope.launch {  contributors.forEach{ deezerService.lazyLoadImages(it) } }
         }
     }
     fun setPreviousArtist() {

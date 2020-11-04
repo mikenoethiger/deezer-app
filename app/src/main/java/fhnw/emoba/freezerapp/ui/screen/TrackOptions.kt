@@ -102,7 +102,7 @@ private fun Options(model: ModelContainer) {
         val favoriteIcon = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder
         val favoriteText = if (isFavorite) "Un-Favorite" else "Favorite"
         OptionsListItem(favoriteText, favoriteIcon, onClick = {
-            toggleLike(track)
+            toggleFavorite(track)
             closeTrackOptions()
         }, cornerShape = RoundedCornerShape(bottomLeft = cornedRounding, bottomRight = cornedRounding))
     }

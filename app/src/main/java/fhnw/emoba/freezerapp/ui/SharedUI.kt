@@ -27,10 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import fhnw.emoba.R
-import fhnw.emoba.freezerapp.data.Album
-import fhnw.emoba.freezerapp.data.Artist
-import fhnw.emoba.freezerapp.data.NULL_TRACK
-import fhnw.emoba.freezerapp.data.Track
+import fhnw.emoba.freezerapp.data.*
 import fhnw.emoba.freezerapp.model.*
 import fhnw.emoba.freezerapp.ui.screen.AlbumScreen
 import fhnw.emoba.freezerapp.ui.screen.ArtistScreen
@@ -125,9 +122,9 @@ fun AlbumListHorizontal(
                         AlbumScreen(model=model)
                     }
                 },
-                { it.title },
-                { it.imageX400 },
-                IMAGE_MEDIUM
+                text = { it.title },
+                imageSize = IMAGE_MEDIUM,
+                model = model
             )
         }
     }
@@ -157,30 +154,32 @@ fun ArtistListHorizontal(
                         ArtistScreen(model = model)
                     }
                 },
-                { it.name },
-                { it.imageX400 },
-                IMAGE_MEDIUM
+                text = { it.name },
+                imageSize = IMAGE_MEDIUM,
+                model = model
             )
         }
     }
 }
 
 @Composable
-private fun <T> HorizontalItemList(
+private fun <T : HasImage> HorizontalItemList(
     items: List<T>,
     onClick: (T) -> Unit,
     text: (T) -> String,
-    image: (T) -> ImageAsset,
     imageSize: Dp = IMAGE_MEDIUM,
+    model: ModelContainer,
     modifier: Modifier = Modifier
 ) {
     LazyRowFor(items = items, modifier = modifier) { item ->
+        model.appModel.lazyLoadImages(item)
+        val image = item.imageX400
         Column(
             modifier = Modifier.width(imageSize).padding(end=10.dp)
                 .clickable(onClick = { onClick(item) }),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            ImageFillWidth(asset = image(item), width = imageSize, elevation = 10.dp)
+            ImageFillWidth(asset = image, width = imageSize, elevation = 10.dp)
             Text(
                 text = text(item),
                 style = MaterialTheme.typography.subtitle1,
@@ -244,7 +243,7 @@ fun TrackListItem(
     val icon: (@Composable () -> Unit)? = if (!showImage && !showIndex) null else {{
         TrackListItemIcon(track = track, index = index, showImage = showImage, showIndex = showIndex)
     }}
-
+    model.appModel.lazyLoadImages(track.album)
     ListItem(
         text = { SingleLineText(track.title) },
         secondaryText = { SingleLineText(subtitle(track)) },
@@ -274,7 +273,7 @@ fun LikeButton(appModel: AppModel, track: Track, color: Color, modifier: Modifie
     appModel.apply {
         val isLiked = isFavorite(track.id)
         IconButton(onClick = {
-            toggleLike(track)
+            toggleFavorite(track)
         }, modifier=modifier) {
             val icon = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder
             Icon(icon, tint=color)

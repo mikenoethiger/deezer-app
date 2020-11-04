@@ -13,63 +13,93 @@ import java.lang.IllegalStateException
 class AppModel(private val deezerService: DeezerService, private val storageService: StorageService) {
     private val modelScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    val appTitle = "Freezer App"
     var isPlayerOpen by mutableStateOf(false)
 
-    var isLoading by mutableStateOf(false)
-
-    var favoriteTracksLoading by mutableStateOf(false)
+    var isFavoriteTracksLoading by mutableStateOf(false)
     var favoriteTracks: List<Track> by mutableStateOf(emptyList())
 
-    var radiosLoading by mutableStateOf(false)
+    var isRadiosLoading by mutableStateOf(false)
     var radios: List<Radio> by mutableStateOf(emptyList())
     var currentRadio by mutableStateOf(NULL_RADIO)
-    var currentRadioLoading by mutableStateOf(false)
+    var isCurrentRadioLoading by mutableStateOf(false)
     var currentRadioTracks: List<Track> by mutableStateOf(emptyList())
-    init {
-        loadSearchHistoryFromLocalStorage()
-        loadFavoriteTracksFromLocalStorage()
-    }
+
+    private var searchText by mutableStateOf("")
+    private var searchHistory: List<String> by mutableStateOf(emptyList())
+    var isSearchLoading by mutableStateOf(false)
+    var isSearchFocused by mutableStateOf(false)
+    var searchTrackList: List<Track> by mutableStateOf(emptyList())
+    var searchArtists: List<Artist> by mutableStateOf(emptyList())
+    var searchAlbums: List<Album> by mutableStateOf(emptyList())
 
     // track to be shown in the track options screen
     private var currentOptionsTrack by mutableStateOf(NULL_TRACK)
     var isTrackOptionsOpen by mutableStateOf(false)
 
+    init {
+        loadSearchHistoryFromLocalStorage()
+        loadFavoriteTracksFromLocalStorage()
+    }
+
+    /* TRACK OPTIONS MANAGEMENT */
+
     fun currentOptionsTrack() = currentOptionsTrack
+
     fun showTrackOptions(track: Track) {
         currentOptionsTrack = track
         isTrackOptionsOpen = true
     }
+
     fun closeTrackOptions() {
         isTrackOptionsOpen = false
     }
 
+    /* RADIOS MANAGEMENT */
+
     fun lazyLoadRadios() {
         if (radios.isNotEmpty()) return
-        radiosLoading = true
+        isRadiosLoading = true
         modelScope.launch {
             radios = deezerService.loadRadios()
-            radiosLoading = false
+            isRadiosLoading = false
         }
     }
+
     fun setCurrentRadioAndLoadTrackList(radio: Radio) {
-        currentRadioLoading = true
+        isCurrentRadioLoading = true
         currentRadio = radio
         currentRadioTracks = emptyList()
         modelScope.launch {
             currentRadioTracks = deezerService.loadTracks(currentRadio)
-            currentRadioLoading = false
-            // load track album images
-            modelScope.launch{
-                currentRadioTracks.forEach { deezerService.lazyLoadImages(it.album) }
-            }
+            isCurrentRadioLoading = false
         }
     }
 
-    fun lazyLoadImages(obj: HasImage) = modelScope.launch { deezerService.lazyLoadImages(obj) }
+    /* FAVORITE TRACKS MANAGEMENT */
+
+    fun toggleFavorite(track: Track) {
+        if (isFavorite(track.id)) unfavorTrack(track)
+        else favorTrack(track)
+    }
+
+    fun favorTrack(track: Track) {
+        favoriteTracks = favoriteTracks.plus(track)
+        modelScope.launch {
+            storageService.writeFavoriteTracks(favoriteTracks.map { it.id })
+        }
+    }
+
+    fun unfavorTrack(track: Track) {
+        favoriteTracks = favoriteTracks.minus(track)
+        modelScope.launch {
+            storageService.writeFavoriteTracks(favoriteTracks.map { it.id })
+        }
+    }
+
+    fun isFavorite(trackID: Int): Boolean = favoriteTracks.map { it.id }.contains(trackID)
 
     private fun loadFavoriteTracksFromLocalStorage() {
-        favoriteTracksLoading = true
+        isFavoriteTracksLoading = true
         modelScope.launch {
             val trackIdFlow = storageService.readFavoriteTracks()
             trackIdFlow.collect { trackIDs ->
@@ -77,72 +107,12 @@ class AppModel(private val deezerService: DeezerService, private val storageServ
                 favoriteTracks = trackIDs.map { id ->
                     deezerService.loadTrack(id)
                 }
-                favoriteTracksLoading = false
-                // load album images
-                favoriteTracks.forEach{ track ->
-                    modelScope.launch { deezerService.lazyLoadImages(track.album) }
-                }
+                isFavoriteTracksLoading = false
             }
         }
     }
-    fun toggleLike(track: Track) {
-        if (isFavorite(track.id)) unlikeTrack(track)
-        else likeTrack(track)
-    }
-    fun likeTrack(track: Track) {
-        favoriteTracks = favoriteTracks.plus(track)
-        modelScope.launch {
-            storageService.writeFavoriteTracks(favoriteTracks.map { it.id })
-        }
-    }
-    fun unlikeTrack(track: Track) {
-        favoriteTracks = favoriteTracks.minus(track)
-        modelScope.launch {
-            storageService.writeFavoriteTracks(favoriteTracks.map { it.id })
-        }
-    }
-    fun isFavorite(trackID: Int): Boolean = favoriteTracks.map { it.id }.contains(trackID)
 
-    private var nestedScreens: Map<MainMenu, List<Screen>> by mutableStateOf(emptyMap())
-    // var currentNestedScreen: Map<MainMenu, Screen> by mutableStateOf(mapOf())
-    private var currentMenu: MainMenu by mutableStateOf(MainMenu.SEARCH)
-
-    fun currentMenu() = currentMenu
-    fun setMenu(mainMenu: MainMenu) {
-        // drop screen stack of current menu, when selecting current menu twice
-        if (currentMenu == mainMenu) {
-            nestedScreens = nestedScreens.minus(currentMenu)
-        }
-        currentMenu = mainMenu
-    }
-    fun getCurrentNestedScreen(defaultUI: @Composable () -> Unit): Screen {
-        if (nestedScreens.getOrDefault(currentMenu, emptyList()).isEmpty()) return Screen(defaultUI, true, "")
-        return nestedScreens[currentMenu]!!.last()
-    }
-    fun closeNestedScreen() {
-        val currentScreenStack = nestedScreens.getOrDefault(currentMenu, emptyList())
-        nestedScreens = nestedScreens.plus(Pair(currentMenu, currentScreenStack.dropLast(1)))
-    }
-    /**
-     * Open a nested screen in the currentMenu
-     * @param title screen title
-     */
-    fun openNestedScreen(title: String, ui: @Composable () -> Unit) {
-        val currentScreenStack = nestedScreens.getOrDefault(currentMenu, emptyList())
-        val screen = Screen(ui, true, title)
-        nestedScreens = nestedScreens.plus(Pair(currentMenu, currentScreenStack.plus(screen)))
-    }
-    fun getPreviousScreenName(): String {
-        val currentScreenStack = nestedScreens.getOrDefault(currentMenu, emptyList())
-        return if (currentScreenStack.size < 2) currentMenu.title else currentScreenStack[currentScreenStack.lastIndex-1].screenName
-    }
-
-    var isSearchFocused by mutableStateOf(false)
-    private var searchText by mutableStateOf("")
-    private var searchHistory: List<String> by mutableStateOf(emptyList())
-    var searchTrackList: List<Track> by mutableStateOf(emptyList())
-    var searchArtists: List<Artist> by mutableStateOf(emptyList())
-    var searchAlbums: List<Album> by mutableStateOf(emptyList())
+    /* SEARCH MANAGEMENT */
 
     fun searchText() = searchText
     fun searchText(value: String) {
@@ -162,7 +132,7 @@ class AppModel(private val deezerService: DeezerService, private val storageServ
 
     fun search() {
         if (searchText.length < 2) return
-        isLoading = true
+        isSearchLoading = true
         // add term to search history
         addToSearchHistory(searchText)
         searchTrackList = emptyList()
@@ -170,11 +140,7 @@ class AppModel(private val deezerService: DeezerService, private val storageServ
             searchTrackList = deezerService.search(searchText)
             searchArtists = deezerService.uniqueArtists(searchTrackList).toList()
             searchAlbums = deezerService.uniqueAlbums(searchTrackList).toList()
-            isLoading = false
-            searchTrackList.forEach{
-                deezerService.lazyLoadImages(it.album)
-                deezerService.lazyLoadImages(it.artist)
-            }
+            isSearchLoading = false
         }
     }
     fun deleteSearchHistory() {
@@ -205,16 +171,58 @@ class AppModel(private val deezerService: DeezerService, private val storageServ
         }
     }
 
+    /* NESTED SCREEN MANAGEMENT */
+
+    private var currentMenu: MainMenu by mutableStateOf(MainMenu.SEARCH)
+    private var nestedScreens: Map<MainMenu, List<Screen>> by mutableStateOf(emptyMap())
+
+    fun currentMenu() = currentMenu
+
+    fun setMenu(mainMenu: MainMenu) {
+        // drop screen stack of current menu, when selecting current menu twice
+        if (currentMenu == mainMenu) {
+            nestedScreens = nestedScreens.minus(currentMenu)
+        }
+        currentMenu = mainMenu
+    }
+
+    fun getCurrentNestedScreen(defaultUI: @Composable () -> Unit): Screen {
+        if (nestedScreens.getOrDefault(currentMenu, emptyList()).isEmpty()) return Screen(defaultUI, true, "")
+        return nestedScreens[currentMenu]!!.last()
+    }
+
+    fun closeNestedScreen() {
+        val currentScreenStack = nestedScreens.getOrDefault(currentMenu, emptyList())
+        nestedScreens = nestedScreens.plus(Pair(currentMenu, currentScreenStack.dropLast(1)))
+    }
+    /**
+     * Open a nested screen in the currentMenu
+     * @param title screen title
+     */
+    fun openNestedScreen(title: String, ui: @Composable () -> Unit) {
+        val currentScreenStack = nestedScreens.getOrDefault(currentMenu, emptyList())
+        val screen = Screen(ui, true, title)
+        nestedScreens = nestedScreens.plus(Pair(currentMenu, currentScreenStack.plus(screen)))
+    }
+    fun getPreviousScreenName(): String {
+        val currentScreenStack = nestedScreens.getOrDefault(currentMenu, emptyList())
+        return if (currentScreenStack.size < 2) currentMenu.title else currentScreenStack[currentScreenStack.lastIndex-1].screenName
+    }
+
+    /* OTHER FUNCTIONS */
+
+    fun lazyLoadImages(obj: HasImage) = modelScope.launch { deezerService.lazyLoadImages(obj) }
+
     private suspend fun waitUntilMutableStateReadable() {
         // The following IllegalStateException is thrown if mutableStateOf variables are accessed
-        // from a coroutine shortly after the object has been initialized:
+        // from a coroutine shortly after the object has been initialized (e.g. in the init block):
         // "Reading a state that was created after the snapshot was taken or in a snapshot that has not yet been applied"
         // The proper solution for this problem could not be found yet.
         // In this function we just loop as long as the IllegalStateException is thrown.
         var readable = false
         while (!readable) {
             try {
-                favoriteTracksLoading = favoriteTracksLoading
+                isFavoriteTracksLoading = isFavoriteTracksLoading
                 Log.d("favorite", "mutable state readable")
                 readable = true
             } catch (e: IllegalStateException) {
@@ -224,10 +232,10 @@ class AppModel(private val deezerService: DeezerService, private val storageServ
             }
         }
     }
+
 }
 
 // if isOpeningTransition is true, then the transition is meant to open the screen, otherwise close the screen
 // might be relevant for animation, for example closing transitions may want to slide in the visible screen from left to right
 // while opening transition may want to slide in the visible screen from right to left
 data class Screen(val composeFunction: @Composable () -> Unit, val isOpeningTransition: Boolean, val screenName: String)
-class ScreenTransition(val newScreen: () -> Unit, val oldScreen: (() -> Unit) ? = null, val forward: Boolean = true)

@@ -56,7 +56,7 @@ private fun Body(model: ModelContainer) {
 private fun SearchResult(model: ModelContainer) {
     model.appModel.apply {
         when {
-            isLoading -> LoadingBox("Searching...")
+            isSearchLoading -> LoadingBox("Searching...")
             searchTrackList.isEmpty() -> {
                 SearchHistory(model)
             }

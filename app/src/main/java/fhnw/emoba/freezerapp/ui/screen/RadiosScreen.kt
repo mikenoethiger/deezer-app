@@ -37,7 +37,7 @@ fun RadiosScreen(model: ModelContainer) {
 private fun Body(model: ModelContainer) {
     model.appModel.apply {
         Column {
-            if (radiosLoading) {
+            if (isRadiosLoading) {
                 LoadingBox(message = "Loading radios...")
             } else {
                 LazyColumn {

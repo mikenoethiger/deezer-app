@@ -3,12 +3,8 @@ package fhnw.emoba.freezerapp.data.impl
 import androidx.compose.ui.graphics.ImageAsset
 import androidx.compose.ui.graphics.asImageAsset
 import fhnw.emoba.freezerapp.data.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 import org.json.JSONObject
-import java.lang.StringBuilder
+import java.util.*
 
 object RemoteDeezerService : DeezerService {
     private const val baseURL = "https://api.deezer.com"
@@ -16,6 +12,8 @@ object RemoteDeezerService : DeezerService {
     private const val baseURLArtist = "$baseURL/artist"
     private const val baseURLTrack = "$baseURL/track"
     private const val baseURLRadio = "$baseURL/radio"
+
+    private val imageCache = Collections.synchronizedMap(LRUCache<String, ImageAsset>(300))
 
     override fun search(query: String, fuzzyMode: Boolean, order: SearchOrder): List<Track> {
         // early return
@@ -56,10 +54,14 @@ object RemoteDeezerService : DeezerService {
     }
 
     override fun lazyLoadImages(obj: HasImage) {
-        // TODO cache images by url
         if (obj.imagesLoaded) return
-        obj.imageX120 = getImage(obj.getImageUrl(ImageSize.x120))
-        obj.imageX400 = getImage(obj.getImageUrl(ImageSize.x400))
+        if (obj.getImageUrl().isBlank()) return
+        val x120URL = obj.getImageUrl(ImageSize.x120)
+        val x400URL = obj.getImageUrl(ImageSize.x400)
+        if (imageCache[x120URL] == null) imageCache[x120URL] = getImage(x120URL)
+        if (imageCache[x400URL] == null) imageCache[x400URL] = getImage(x400URL)
+        obj.imageX120 = imageCache[x120URL]!!
+        obj.imageX400 = imageCache[x400URL]!!
         obj.imagesLoaded = true
     }
 
