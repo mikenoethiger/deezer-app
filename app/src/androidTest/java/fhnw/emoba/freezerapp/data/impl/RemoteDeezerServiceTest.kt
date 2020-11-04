@@ -6,23 +6,32 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class RemoteDeezerServiceTest {
+
     @Test
-    fun testSearch() {
+    fun testSearchTracks() {
         // when
-        val searchResults = RemoteDeezerService.search("Eminem")
+        val searchResults = RemoteDeezerService.searchTracks("Eminem")
         // then
         assert(searchResults.isNotEmpty())
     }
 
     @Test
-    fun testExtendedSearch() {
+    fun testSearchArtist() {
+        // when
+        val searchResults = RemoteDeezerService.searchArtists("Eminem")
+        // then
+        assert(searchResults.isNotEmpty())
+    }
+
+    @Test
+    fun testExtendedTrackSearch() {
         // given
         val searchParameters = emptyMap<String, String>()
             .plus(Pair("artist", "Eminem"))
             .plus(Pair("album", "The Eminem Show"))
             .plus(Pair("track", "Sing For The Moment"))
         // when
-        val searchResults = RemoteDeezerService.extendedSearch(searchParameters)
+        val searchResults = RemoteDeezerService.extendedTrackSearch(searchParameters)
         // then
         assert(searchResults.isNotEmpty())
     }
@@ -30,7 +39,7 @@ class RemoteDeezerServiceTest {
     @Test
     fun testUniqueAlbums() {
         // given
-        val searchResults = RemoteDeezerService.search("Eminem")
+        val searchResults = RemoteDeezerService.searchTracks("Eminem")
         // when
         val albums = RemoteDeezerService.uniqueAlbums(searchResults)
         // then
@@ -40,9 +49,22 @@ class RemoteDeezerServiceTest {
     }
 
     @Test
+    fun testUniqueContributors() {
+        // given
+        val artist = RemoteDeezerService.loadArtist(27)
+        val tracks = RemoteDeezerService.loadTracks(artist)
+        // when
+        val contributors = RemoteDeezerService.uniqueContributors(tracks)
+        // then
+        val contributorCount = mutableMapOf<Int, Int>()
+        contributors.forEach{ contributorCount.compute(it.id) { _, count -> count?.plus(1) ?: 1} }
+        contributorCount.forEach{ assert(1 == it.value) }
+    }
+
+    @Test
     fun testUniqueArtists() {
         // given
-        val searchResults = RemoteDeezerService.search("Happy")
+        val searchResults = RemoteDeezerService.searchTracks("Happy")
         // when
         val artists = RemoteDeezerService.uniqueArtists(searchResults)
         // then
@@ -87,5 +109,39 @@ class RemoteDeezerServiceTest {
         val radios = RemoteDeezerService.loadRadios()
         // then
         assert(radios.isNotEmpty())
+    }
+
+    @Test
+    fun testLoadTracks() {
+        // given
+        val artist = RemoteDeezerService.loadArtist(27)
+        // when
+        val tracks = RemoteDeezerService.loadTracks(artist)
+        // then
+        assert(tracks.isNotEmpty())
+        assert(tracks[0].artist.name == artist.name)
+    }
+
+    @Test
+    fun testLoadTracksWithLimit() {
+        // given
+        val artist = RemoteDeezerService.loadArtist(27)
+        val limit = 10
+        val offset = 5
+        // when
+        val tracks = RemoteDeezerService.loadTracks(artist, limit, offset)
+        // then
+        assert(tracks.size == limit)
+        assert(tracks[0].artist.name == artist.name)
+    }
+
+    @Test
+    fun lazyLoadImages() {
+        // given
+        val artist = RemoteDeezerService.loadArtist(27)
+        // when
+        RemoteDeezerService.lazyLoadImages(artist)
+        // then
+        assert(artist.imagesLoaded)
     }
 }

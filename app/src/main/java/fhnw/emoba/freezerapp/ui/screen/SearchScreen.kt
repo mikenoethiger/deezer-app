@@ -121,7 +121,7 @@ private fun SearchHistory(model: ModelContainer) {
                         },
                         modifier = Modifier.clickable (onClick = {
                             focusSearch()
-                            searchText(searchTerm)
+                            searchTextSet(searchTerm)
                             search()
                         })
                     )
@@ -144,12 +144,12 @@ private fun SearchTextField(model: ModelContainer, modifier: Modifier = Modifier
             val placeHolderText = if (isSearchFocused) "Search" else "Tracks, Artists, Albums"
             TextField(
                 value = searchText(),
-                onValueChange = { newValue -> searchText(newValue) },
+                onValueChange = { newValue -> searchTextSet(newValue) },
                 placeholder = { Text(placeHolderText) },
                 leadingIcon = { Icon(asset = Icons.Filled.Search) },
                 trailingIcon = {
                     IconButton(onClick = {
-                        searchText("")
+                        searchTextSet("")
                     }) { Icon(Icons.Filled.Clear) }
                 },
                 imeAction = ImeAction.Search,
@@ -168,7 +168,7 @@ private fun SearchTextField(model: ModelContainer, modifier: Modifier = Modifier
             )
             if (isSearchFocused) {
                 Text(text = "Cancel", modifier = Modifier.clickable(onClick = {
-                    clearSearchResult()
+                    clearSearch()
                     isSearchFocused = false
                 }))
             }

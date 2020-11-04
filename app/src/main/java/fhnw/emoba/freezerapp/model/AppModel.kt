@@ -81,7 +81,6 @@ class AppModel(private val deezerService: DeezerService, private val storageServ
         if (isFavorite(track.id)) unfavorTrack(track)
         else favorTrack(track)
     }
-
     fun favorTrack(track: Track) {
         favoriteTracks = favoriteTracks.plus(track)
         modelScope.launch {
@@ -115,15 +114,15 @@ class AppModel(private val deezerService: DeezerService, private val storageServ
     /* SEARCH MANAGEMENT */
 
     fun searchText() = searchText
-    fun searchText(value: String) {
+    fun searchTextSet(value: String) {
         searchText = value
-        if (searchText.isBlank()) clearSearchResult()
+        if (searchText.isBlank()) clearSearch()
     }
     fun searchHistory() = searchHistory
     fun focusSearch() {
         isSearchFocused = true
     }
-    fun clearSearchResult() {
+    fun clearSearch() {
         searchText = ""
         searchTrackList = emptyList()
         searchArtists = emptyList()
@@ -137,8 +136,9 @@ class AppModel(private val deezerService: DeezerService, private val storageServ
         addToSearchHistory(searchText)
         searchTrackList = emptyList()
         modelScope.launch {
-            searchTrackList = deezerService.search(searchText)
-            searchArtists = deezerService.uniqueArtists(searchTrackList).toList()
+            searchTrackList = deezerService.searchTracks(searchText)
+            searchArtists =  deezerService.searchArtists(searchText)
+            // searchArtists = deezerService.uniqueArtists(searchTrackList).toList()
             searchAlbums = deezerService.uniqueAlbums(searchTrackList).toList()
             isSearchLoading = false
         }
@@ -195,6 +195,7 @@ class AppModel(private val deezerService: DeezerService, private val storageServ
         val currentScreenStack = nestedScreens.getOrDefault(currentMenu, emptyList())
         nestedScreens = nestedScreens.plus(Pair(currentMenu, currentScreenStack.dropLast(1)))
     }
+
     /**
      * Open a nested screen in the currentMenu
      * @param title screen title

@@ -30,7 +30,7 @@ class ArtistModel(private val deezerService: DeezerService) {
         isLoading = true
         modelScope.launch {
             trackList = deezerService.loadTracks(artist, tracksToLoad)
-            val searchTracks = deezerService.extendedSearch(mapOf(Pair("artist", currentArtist.name)))
+            val searchTracks = deezerService.extendedTrackSearch(mapOf(Pair("artist", currentArtist.name)))
             albums = deezerService.uniqueAlbums(searchTracks).toList()
             contributors =  deezerService.uniqueContributors(trackList).toList()
             isLoading = false

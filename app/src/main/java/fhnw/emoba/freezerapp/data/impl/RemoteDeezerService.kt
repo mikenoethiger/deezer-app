@@ -3,26 +3,34 @@ package fhnw.emoba.freezerapp.data.impl
 import androidx.compose.ui.graphics.ImageAsset
 import androidx.compose.ui.graphics.asImageAsset
 import fhnw.emoba.freezerapp.data.*
+import org.json.JSONArray
 import org.json.JSONObject
 import java.util.*
 
 object RemoteDeezerService : DeezerService {
     private const val baseURL = "https://api.deezer.com"
-    private const val baseURLAlbum = "$baseURL/album"
-    private const val baseURLArtist = "$baseURL/artist"
-    private const val baseURLTrack = "$baseURL/track"
-    private const val baseURLRadio = "$baseURL/radio"
+    private const val searchURL = "$baseURL/search"
+    private const val searchArtistURL = "$searchURL/artist"
+    private const val albumURL = "$baseURL/album"
+    private const val artistURL = "$baseURL/artist"
+    private const val trackURL = "$baseURL/track"
+    private const val radioURL = "$baseURL/radio"
 
     private val imageCache = Collections.synchronizedMap(LRUCache<String, ImageAsset>(300))
 
-    override fun search(query: String, fuzzyMode: Boolean, order: SearchOrder): List<Track> {
-        // early return
+    override fun searchTracks(query: String, fuzzyMode: Boolean, order: SearchOrder): List<Track> {
         if (query.isBlank()) return emptyList()
         val q = URLEncode("\"$query\"")
-        return apiSearch(q, fuzzyMode, order)
+        return apiSearch(searchURL, q, fuzzyMode, order).map { Track(it) }
     }
 
-    override fun extendedSearch(queryParameters: Map<String, String>, fuzzyMode: Boolean, order: SearchOrder): List<Track> {
+    override fun searchArtists(query: String, fuzzyMode: Boolean, order: SearchOrder): List<Artist> {
+        if (query.isBlank()) return emptyList()
+        val q = URLEncode("\"$query\"")
+        return apiSearch(searchArtistURL, q, fuzzyMode, order).map { Artist(it) }
+    }
+
+    override fun extendedTrackSearch(queryParameters: Map<String, String>, fuzzyMode: Boolean, order: SearchOrder): List<Track> {
         // early return
         if (queryParameters.isEmpty()) return emptyList()
         // validation
@@ -31,7 +39,14 @@ object RemoteDeezerService : DeezerService {
         // build url
         val q = StringBuilder()
         queryParameters.forEach{ q.append("${it.key}:\"${it.value}\" ")}
-        return apiSearch(URLEncode(q.toString()), fuzzyMode, order)
+        return apiSearch(searchURL, URLEncode(q.toString()), fuzzyMode, order).map { Track(it) }
+    }
+
+    override fun loadTrack(trackID: Int): Track = Track(content("$trackURL/$trackID"))
+    override fun loadArtist(artistId: Int): Artist = Artist(content("$artistURL/$artistId"))
+    override fun loadAlbum(albumId: Int): Album = Album(content("$albumURL/$albumId"))
+    override fun loadRadios(): List<Radio> {
+        return JSONObject(content(radioURL)).getJSONArray("data").map { Radio(it) }
     }
 
     override fun loadTracks(obj: HasTrackList): List<Track> {
@@ -43,14 +58,9 @@ object RemoteDeezerService : DeezerService {
     }
 
     override fun loadTracks(obj: HasTrackList, limit: Int, index: Int): List<Track> {
-        return JSONObject(content(obj.getTrackListUrl(limit, index))).getJSONArray("data").map { Track(it) }
-    }
-
-    override fun loadTrack(trackID: Int): Track = Track(content("$baseURLTrack/$trackID"))
-    override fun loadArtist(artistId: Int): Artist = Artist(content("$baseURLArtist/$artistId"))
-    override fun loadAlbum(albumId: Int): Album = Album(content("$baseURLAlbum/$albumId"))
-    override fun loadRadios(): List<Radio> {
-        return JSONObject(content(baseURLRadio)).getJSONArray("data").map { Radio(it) }
+        val response = JSONObject(content(obj.getTrackListUrl(limit, index)))
+        if (response.has("error")) return emptyList()
+        return response.getJSONArray("data").map { Track(it) }
     }
 
     override fun lazyLoadImages(obj: HasImage) {
@@ -58,8 +68,8 @@ object RemoteDeezerService : DeezerService {
         if (obj.getImageUrl().isBlank()) return
         val x120URL = obj.getImageUrl(ImageSize.x120)
         val x400URL = obj.getImageUrl(ImageSize.x400)
-        if (imageCache[x120URL] == null) imageCache[x120URL] = getImage(x120URL)
-        if (imageCache[x400URL] == null) imageCache[x400URL] = getImage(x400URL)
+        if (imageCache[x120URL] == null) imageCache[x120URL] = bitmap(x120URL).asImageAsset()
+        if (imageCache[x400URL] == null) imageCache[x400URL] = bitmap(x400URL).asImageAsset()
         obj.imageX120 = imageCache[x120URL]!!
         obj.imageX400 = imageCache[x400URL]!!
         obj.imagesLoaded = true
@@ -86,15 +96,10 @@ object RemoteDeezerService : DeezerService {
     /**
      * @param q url encoded query string
      */
-    private fun apiSearch(q: String, fuzzyMode: Boolean, order: SearchOrder): List<Track> {
+    private fun apiSearch(baseURL: String, q: String, fuzzyMode: Boolean, order: SearchOrder): JSONArray {
         val strict = if (fuzzyMode) "off" else "on"
-        val url = "$baseURL/search?q=$q&strict=$strict&order=${order}"
+        val url = "$baseURL?q=$q&strict=$strict&order=${order}"
         // make API request and map result to SearchResults
-        return JSONObject(content(url)).getJSONArray("data").map { Track(it) }
-    }
-
-    private fun getImage(url: String): ImageAsset {
-        // TODO improve by caching covers locally
-        return bitmap(url).asImageAsset()
+        return JSONObject(content(url)).getJSONArray("data")
     }
 }
