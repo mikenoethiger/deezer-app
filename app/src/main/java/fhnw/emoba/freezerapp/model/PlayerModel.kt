@@ -2,6 +2,7 @@ package fhnw.emoba.freezerapp.model
 
 import android.media.AudioAttributes
 import android.media.MediaPlayer
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -22,7 +23,12 @@ object PlayerModel {
     private var trackListName by mutableStateOf("")
 
     private val player = MediaPlayer().apply {
-        setOnCompletionListener { nextTrack() }
+        setOnCompletionListener {
+            Log.d("player", "on completion listener")
+            pause()
+            // seems to be buggy
+//            nextTrack()
+        }
         setAudioAttributes(AudioAttributes.Builder().setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build())
         setOnPreparedListener {
             isReady = true
@@ -53,6 +59,7 @@ object PlayerModel {
         stopTimeSliderJob()
     }
     fun nextTrack() {
+        Log.d("player", "next track")
         var idx = trackList.indexOf(track)
         if (idx == trackList.size-1) idx = -1
         loadTrack(trackList[idx+1])
